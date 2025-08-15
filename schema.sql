@@ -11,7 +11,12 @@ CREATE TABLE users (
 
 CREATE TABLE event_registrations (
     registration_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(user_id),
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    company VARCHAR(255),
+    job_title VARCHAR(255),
     years_of_experience VARCHAR(50),
     topics_of_interest TEXT,
     dietary_restrictions TEXT,
@@ -21,7 +26,12 @@ CREATE TABLE event_registrations (
 
 CREATE TABLE waitlist_registrations (
     waitlist_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(user_id),
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    company VARCHAR(255),
+    job_title VARCHAR(255),
     reason_to_attend TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

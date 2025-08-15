@@ -8,7 +8,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
 
+
+# Load environment variables from .env file
 load_dotenv()
+
 app = FastAPI()
 
 # Database Configuration (MySQL)
@@ -51,21 +54,29 @@ class User(Base):
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
     registration_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    company = Column(String(255))
+    job_title = Column(String(255))
     years_of_experience = Column(String(50))
     topics_of_interest = Column(Text)
     dietary_restrictions = Column(Text)
     referral_source = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
-    user = relationship("User")
 
 class WaitlistRegistration(Base):
     __tablename__ = "waitlist_registrations"
     waitlist_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    company = Column(String(255))
+    job_title = Column(String(255))
     reason_to_attend = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
-    user = relationship("User")
 
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
@@ -143,14 +154,24 @@ class UserCreate(BaseModel):
     job_title: str | None = None
 
 class EventRegistrationCreate(BaseModel):
-    user_id: int
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: str
+    company: str | None = None
+    job_title: str | None = None
     years_of_experience: str | None = None
     topics_of_interest: str | None = None
     dietary_restrictions: str | None = None
     referral_source: str | None = None
 
 class WaitlistRegistrationCreate(BaseModel):
-    user_id: int
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: str
+    company: str | None = None
+    job_title: str | None = None
     reason_to_attend: str
 
 class ContactMessageCreate(BaseModel):
@@ -215,14 +236,9 @@ def get_db():
     finally:
         db.close()
 
-# Root endpoint
-@app.get("/")
-async def root():
-    return {"message": "Welcome to MMML Backend API", "docs": "/docs"}
-
 # API Endpoints
 @app.post("/users/")
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: UserCreate, db: SessionLocal = Depends(get_db)):
     db_user = User(**user.dict())
     db.add(db_user)
     db.commit()
@@ -230,7 +246,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return {"user_id": db_user.user_id}
 
 @app.post("/event-registrations/")
-async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
+async def create_event_registration(registration: EventRegistrationCreate, db: SessionLocal = Depends(get_db)):
     db_registration = EventRegistration(**registration.dict())
     db.add(db_registration)
     db.commit()
@@ -238,7 +254,7 @@ async def create_event_registration(registration: EventRegistrationCreate, db: S
     return {"registration_id": db_registration.registration_id}
 
 @app.post("/waitlist-registrations/")
-async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: Session = Depends(get_db)):
+async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: SessionLocal = Depends(get_db)):
     db_registration = WaitlistRegistration(**registration.dict())
     db.add(db_registration)
     db.commit()
@@ -246,7 +262,7 @@ async def create_waitlist_registration(registration: WaitlistRegistrationCreate,
     return {"waitlist_id": db_registration.waitlist_id}
 
 @app.post("/contact-messages/")
-async def create_contact_message(message: ContactMessageCreate, db: Session = Depends(get_db)):
+async def create_contact_message(message: ContactMessageCreate, db: SessionLocal = Depends(get_db)):
     db_message = ContactMessage(**message.dict())
     db.add(db_message)
     db.commit()
@@ -254,7 +270,7 @@ async def create_contact_message(message: ContactMessageCreate, db: Session = De
     return {"message_id": db_message.message_id}
 
 @app.post("/speaker-applications/")
-async def create_speaker_application(application: SpeakerApplicationCreate, db: Session = Depends(get_db)):
+async def create_speaker_application(application: SpeakerApplicationCreate, db: SessionLocal = Depends(get_db)):
     db_application = SpeakerApplication(**application.dict())
     db.add(db_application)
     db.commit()
@@ -262,7 +278,7 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     return {"application_id": db_application.application_id}
 
 @app.post("/sponsorship-inquiries/")
-async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: Session = Depends(get_db)):
+async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: SessionLocal = Depends(get_db)):
     db_inquiry = SponsorshipInquiry(**inquiry.dict())
     db.add(db_inquiry)
     db.commit()
@@ -270,7 +286,7 @@ async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: Sess
     return {"inquiry_id": db_inquiry.inquiry_id}
 
 @app.post("/partnership-proposals/")
-async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: Session = Depends(get_db)):
+async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: SessionLocal = Depends(get_db)):
     db_proposal = PartnershipProposal(**proposal.dict())
     db.add(db_proposal)
     db.commit()
@@ -278,15 +294,16 @@ async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: S
     return {"proposal_id": db_proposal.proposal_id}
 
 @app.post("/volunteer-applications/")
-async def create_volunteer_application(application: VolunteerApplicationCreate, db: Session = Depends(get_db)):
+async def create_volunteer_application(application: VolunteerApplicationCreate, db: SessionLocal = Depends(get_db)):
     db_application = VolunteerApplication(**application.dict())
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
     return {"application_id": db_application.application_id}
 
+
 if __name__ == "__main__":
     print("🚀 Starting MMML Backend Server...")
     print("📖 API Documentation available at: http://localhost:8000/docs")
     print("🌐 Server will be running at: http://localhost:8000")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)    
