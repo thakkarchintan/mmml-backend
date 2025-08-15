@@ -8,7 +8,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
 
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -238,72 +237,71 @@ def get_db():
 
 # API Endpoints
 @app.post("/users/")
-async def create_user(user: UserCreate, db: SessionLocal = Depends(get_db)):
-    db_user = User(**user.dict())
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = User(**user.model_dump())
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return {"user_id": db_user.user_id}
 
 @app.post("/event-registrations/")
-async def create_event_registration(registration: EventRegistrationCreate, db: SessionLocal = Depends(get_db)):
-    db_registration = EventRegistration(**registration.dict())
+async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
+    db_registration = EventRegistration(**registration.model_dump())
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
     return {"registration_id": db_registration.registration_id}
 
 @app.post("/waitlist-registrations/")
-async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: SessionLocal = Depends(get_db)):
-    db_registration = WaitlistRegistration(**registration.dict())
+async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: Session = Depends(get_db)):
+    db_registration = WaitlistRegistration(**registration.model_dump())
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
     return {"waitlist_id": db_registration.waitlist_id}
 
 @app.post("/contact-messages/")
-async def create_contact_message(message: ContactMessageCreate, db: SessionLocal = Depends(get_db)):
-    db_message = ContactMessage(**message.dict())
+async def create_contact_message(message: ContactMessageCreate, db: Session = Depends(get_db)):
+    db_message = ContactMessage(**message.model_dump())
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
     return {"message_id": db_message.message_id}
 
 @app.post("/speaker-applications/")
-async def create_speaker_application(application: SpeakerApplicationCreate, db: SessionLocal = Depends(get_db)):
-    db_application = SpeakerApplication(**application.dict())
+async def create_speaker_application(application: SpeakerApplicationCreate, db: Session = Depends(get_db)):
+    db_application = SpeakerApplication(**application.model_dump())
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
     return {"application_id": db_application.application_id}
 
 @app.post("/sponsorship-inquiries/")
-async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: SessionLocal = Depends(get_db)):
-    db_inquiry = SponsorshipInquiry(**inquiry.dict())
+async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: Session = Depends(get_db)):
+    db_inquiry = SponsorshipInquiry(**inquiry.model_dump())
     db.add(db_inquiry)
     db.commit()
     db.refresh(db_inquiry)
     return {"inquiry_id": db_inquiry.inquiry_id}
 
 @app.post("/partnership-proposals/")
-async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: SessionLocal = Depends(get_db)):
-    db_proposal = PartnershipProposal(**proposal.dict())
+async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: Session = Depends(get_db)):
+    db_proposal = PartnershipProposal(**proposal.model_dump())
     db.add(db_proposal)
     db.commit()
     db.refresh(db_proposal)
     return {"proposal_id": db_proposal.proposal_id}
 
 @app.post("/volunteer-applications/")
-async def create_volunteer_application(application: VolunteerApplicationCreate, db: SessionLocal = Depends(get_db)):
-    db_application = VolunteerApplication(**application.dict())
+async def create_volunteer_application(application: VolunteerApplicationCreate, db: Session = Depends(get_db)):
+    db_application = VolunteerApplication(**application.model_dump())
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
     return {"application_id": db_application.application_id}
 
-
 if __name__ == "__main__":
     print("🚀 Starting MMML Backend Server...")
     print("📖 API Documentation available at: http://localhost:8000/docs")
     print("🌐 Server will be running at: http://localhost:8000")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)    
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
