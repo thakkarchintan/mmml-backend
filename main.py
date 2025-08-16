@@ -238,7 +238,7 @@ def get_db():
 # Root endpoint
 @app.get("/")
 async def root():
-    return {"message": "Welcome to MMML Backend API - with deploy workflow 1", "docs": "/docs"}
+    return {"message": "Welcome to MMML Backend API - with deploy workflow 2", "docs": "/docs"}
 
 # API Endpoints
 @app.post("/users/")
