@@ -1,0 +1,38 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: ["main"]   # runs only when you push to main
+  workflow_dispatch:      # allows manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ec2-user/mmml-backend
+
+            # pull latest code
+            git reset --hard
+            git pull origin main
+
+            # activate virtualenv
+            source mmml-env/bin/activate
+
+            # install dependencies
+            pip install -r requirements.txt
+
+            # restart backend
+            sudo systemctl restart mmml-backend.service
+          EOF
