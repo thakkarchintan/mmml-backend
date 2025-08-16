@@ -34,5 +34,5 @@ jobs:
             pip install -r requirements.txt
 
             # restart backend
-            sudo systemctl restart mmml-backend.service
+            sudo systemctl restart mmml_backend.service
           EOF
