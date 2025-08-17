@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Submission Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+        }
+        .form-details {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Thank You!</h1>
+        <p>Your {{ form_type }} has been submitted successfully</p>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ user_name }},</p>
+        
+        <p>Thank you for submitting your {{ form_type }}. We have received your information and will review it shortly.</p>
+        
+        <div class="form-details">
+            <h3>Submission Details:</h3>
+            <p><strong>Form Type:</strong> {{ form_type }}</p>
+            <p><strong>Submission Date:</strong> {{ submission_date }}</p>
+            
+            {% for key, value in form_data.items() %}
+                {% if key not in ['created_at', 'user_id', 'registration_id', 'waitlist_id', 'message_id', 'application_id', 'inquiry_id', 'proposal_id'] %}
+                    <p><strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <p>We will contact you soon with further details or confirmation. If you have any questions, please don't hesitate to reach out to us.</p>
+        
+        <p>Best regards,<br>The MMML Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated confirmation email. Please do not reply to this message.</p>
+    </div>
+</body>
+</html>

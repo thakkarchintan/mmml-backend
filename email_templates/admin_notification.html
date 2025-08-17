@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Form Submission Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2196F3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+        }
+        .form-details {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>New Form Submission</h1>
+        <p>{{ form_type }} received</p>
+    </div>
+    
+    <div class="content">
+        <div class="highlight">
+            <p><strong>⚠️ New {{ form_type }} submission requires your attention!</strong></p>
+        </div>
+        
+        <p>A new {{ form_type }} has been submitted and requires review.</p>
+        
+        <div class="form-details">
+            <h3>Submission Details:</h3>
+            <p><strong>Form Type:</strong> {{ form_type }}</p>
+            <p><strong>Submission Date:</strong> {{ submission_date }}</p>
+            
+            {% for key, value in form_data.items() %}
+                {% if key not in ['created_at', 'user_id', 'registration_id', 'waitlist_id', 'message_id', 'application_id', 'inquiry_id', 'proposal_id'] %}
+                    <p><strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <p><strong>Action Required:</strong> Please review this submission and take appropriate action.</p>
+        
+        <p>You can access the full submission details through your admin dashboard.</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification email from the MMML system.</p>
+    </div>
+</body>
+</html>

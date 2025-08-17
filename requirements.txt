@@ -4,3 +4,5 @@ pymysql
 pydantic
 uvicorn
 python-dotenv
+fastapi-mail
+jinja2

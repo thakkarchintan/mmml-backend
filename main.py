@@ -7,6 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
+from email_service import send_form_submission_emails
 
 # Load environment variables from .env file
 load_dotenv()
@@ -238,7 +239,7 @@ def get_db():
 # Root endpoint
 @app.get("/")
 async def root():
-    return {"message": "Welcome to MMML Backend API - with deploy workflow 2", "docs": "/docs"}
+    return {"message": "Welcome to MMML Backend API", "docs": "/docs"}
 
 # API Endpoints
 @app.post("/users/")
@@ -247,6 +248,25 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    user_name = f"{user.first_name} {user.last_name}"
+    form_data = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "company": user.company,
+        "job_title": user.job_title,
+        "created_at": db_user.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=user.email,
+        user_name=user_name,
+        form_type="User Registration",
+        form_data=form_data
+    )
+    
     return {"user_id": db_user.user_id}
 
 @app.post("/event-registrations/")
@@ -255,6 +275,29 @@ async def create_event_registration(registration: EventRegistrationCreate, db: S
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
+    
+    user_name = f"{registration.first_name} {registration.last_name}"
+    form_data = {
+        "first_name": registration.first_name,
+        "last_name": registration.last_name,
+        "email": registration.email,
+        "phone_number": registration.phone_number,
+        "company": registration.company,
+        "job_title": registration.job_title,
+        "years_of_experience": registration.years_of_experience,
+        "topics_of_interest": registration.topics_of_interest,
+        "dietary_restrictions": registration.dietary_restrictions,
+        "referral_source": registration.referral_source,
+        "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=registration.email,
+        user_name=user_name,
+        form_type="Event Registration",
+        form_data=form_data
+    )
+    
     return {"registration_id": db_registration.registration_id}
 
 @app.post("/waitlist-registrations/")
@@ -263,6 +306,26 @@ async def create_waitlist_registration(registration: WaitlistRegistrationCreate,
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
+    
+    user_name = f"{registration.first_name} {registration.last_name}"
+    form_data = {
+        "first_name": registration.first_name,
+        "last_name": registration.last_name,
+        "email": registration.email,
+        "phone_number": registration.phone_number,
+        "company": registration.company,
+        "job_title": registration.job_title,
+        "reason_to_attend": registration.reason_to_attend,
+        "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=registration.email,
+        user_name=user_name,
+        form_type="Waitlist Registration",
+        form_data=form_data
+    )
+    
     return {"waitlist_id": db_registration.waitlist_id}
 
 @app.post("/contact-messages/")
@@ -271,6 +334,22 @@ async def create_contact_message(message: ContactMessageCreate, db: Session = De
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
+    
+    form_data = {
+        "full_name": message.full_name,
+        "email": message.email,
+        "company_organization": message.company_organization,
+        "message": message.message,
+        "created_at": db_message.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=message.email,
+        user_name=message.full_name,
+        form_type="Contact Message",
+        form_data=form_data
+    )
+    
     return {"message_id": db_message.message_id}
 
 @app.post("/speaker-applications/")
@@ -279,6 +358,27 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
+    
+    form_data = {
+        "full_name": application.full_name,
+        "email": application.email,
+        "company": application.company,
+        "job_title": application.job_title,
+        "linkedin_profile": application.linkedin_profile,
+        "area_of_expertise": application.area_of_expertise,
+        "proposed_topic_title": application.proposed_topic_title,
+        "topic_description": application.topic_description,
+        "speaking_experience": application.speaking_experience,
+        "created_at": db_application.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=application.email,
+        user_name=application.full_name,
+        form_type="Speaker Application",
+        form_data=form_data
+    )
+    
     return {"application_id": db_application.application_id}
 
 @app.post("/sponsorship-inquiries/")
@@ -287,6 +387,27 @@ async def create_sponsorship_inquiry(inquiry: SponsorshipInquiryCreate, db: Sess
     db.add(db_inquiry)
     db.commit()
     db.refresh(db_inquiry)
+    
+    form_data = {
+        "company_name": inquiry.company_name,
+        "contact_name": inquiry.contact_name,
+        "email": inquiry.email,
+        "phone": inquiry.phone,
+        "company_website": inquiry.company_website,
+        "interested_sponsorship_level": inquiry.interested_sponsorship_level,
+        "marketing_objectives": inquiry.marketing_objectives,
+        "budget_range": inquiry.budget_range,
+        "timeline": inquiry.timeline,
+        "created_at": db_inquiry.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=inquiry.email,
+        user_name=inquiry.contact_name,
+        form_type="Sponsorship Inquiry",
+        form_data=form_data
+    )
+    
     return {"inquiry_id": db_inquiry.inquiry_id}
 
 @app.post("/partnership-proposals/")
@@ -295,6 +416,27 @@ async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: S
     db.add(db_proposal)
     db.commit()
     db.refresh(db_proposal)
+    
+    form_data = {
+        "organization_name": proposal.organization_name,
+        "contact_name": proposal.contact_name,
+        "email": proposal.email,
+        "phone": proposal.phone,
+        "organization_website": proposal.organization_website,
+        "partnership_type": proposal.partnership_type,
+        "partnership_proposal": proposal.partnership_proposal,
+        "audience_community": proposal.audience_community,
+        "resources_contributed": proposal.resources_contributed,
+        "created_at": db_proposal.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=proposal.email,
+        user_name=proposal.contact_name,
+        form_type="Partnership Proposal",
+        form_data=form_data
+    )
+    
     return {"proposal_id": db_proposal.proposal_id}
 
 @app.post("/volunteer-applications/")
@@ -303,10 +445,32 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
+    
+    form_data = {
+        "full_name": application.full_name,
+        "email": application.email,
+        "phone_number": application.phone_number,
+        "profession": application.profession,
+        "company_organization": application.company_organization,
+        "volunteer_experience": application.volunteer_experience,
+        "availability": application.availability,
+        "relevant_skills_experience": application.relevant_skills_experience,
+        "areas_of_interest": application.areas_of_interest,
+        "motivation": application.motivation,
+        "created_at": db_application.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    await send_form_submission_emails(
+        user_email=application.email,
+        user_name=application.full_name,
+        form_type="Volunteer Application",
+        form_data=form_data
+    )
+    
     return {"application_id": db_application.application_id}
 
 if __name__ == "__main__":
     print("🚀 Starting MMML Backend Server...")
     print("📖 API Documentation available at: http://localhost:8000/docs")
     print("🌐 Server will be running at: http://localhost:8000")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)    
