@@ -81,6 +81,73 @@ async def send_admin_notification_email(form_type: str, form_data: Dict[str, Any
     
     await fastmail.send_message(message)
 
+async def send_registration_acknowledgement_email(user_email: str, first_name: str, event_date: str):
+    """Send acknowledgement email after registration submission"""
+    subject = f"Thank you for registering for MMML {event_date}"
+    
+    # Create email context
+    context = {
+        "first_name": first_name,
+        "event_date": event_date
+    }
+    
+    # Render email body
+    html_content = get_email_template("registration_acknowledgement", context)
+    
+    message = MessageSchema(
+        subject=subject,
+        recipients=[user_email],
+        body=html_content,
+        subtype="html"
+    )
+    
+    await fastmail.send_message(message)
+
+async def send_registration_approved_email(user_email: str, first_name: str, event_date: str, secure_spot_link: str):
+    """Send approval email with secure spot link"""
+    subject = f"Your MMML {event_date} Registration is Approved 🎉"
+    
+    # Create email context
+    context = {
+        "first_name": first_name,
+        "event_date": event_date,
+        "secure_spot_link": secure_spot_link
+    }
+    
+    # Render email body
+    html_content = get_email_template("registration_approved", context)
+    
+    message = MessageSchema(
+        subject=subject,
+        recipients=[user_email],
+        body=html_content,
+        subtype="html"
+    )
+    
+    await fastmail.send_message(message)
+
+async def send_registration_rejected_email(user_email: str, first_name: str, event_date: str):
+    """Send rejection email with reapplication option"""
+    subject = f"Update on Your MMML {event_date} Registration"
+    
+    # Create email context
+    context = {
+        "first_name": first_name,
+        "event_date": event_date
+    }
+    
+    # Render email body
+    html_content = get_email_template("registration_rejected", context)
+    
+    message = MessageSchema(
+        subject=subject,
+        recipients=[user_email],
+        body=html_content,
+        subtype="html"
+    )
+    
+    await fastmail.send_message(message)
+
 async def send_form_submission_emails(user_email: str, user_name: str, form_type: str, form_data: Dict[str, Any]):
     """Send emails to both user and admin for form submission"""
     try:

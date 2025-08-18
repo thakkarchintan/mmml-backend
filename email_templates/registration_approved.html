@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thank you for registering for MMML</title>
+    <title>Your MMML Registration is Approved</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,6 +25,19 @@
             padding: 20px;
             border-radius: 0 0 5px 5px;
         }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -35,21 +48,23 @@
 </head>
 <body>
     <div class="header">
-        <h1>Thank you for registering for MMML {{ event_date }}</h1>
+        <h1>Your MMML {{ event_date }} Registration is Approved 🎉</h1>
     </div>
     
     <div class="content">
         <p>Hi {{ first_name }},</p>
         
-        <p>Thank you for your interest in attending the upcoming MMML Event.</p>
+        <p>Great news — your registration for the upcoming MMML Event has been approved.</p>
         
-        <p>Your registration has been received and will be reviewed by our event committee. You can expect an update within 24–48 hours.</p>
+        <p>To confirm your participation, please complete your registration by clicking the link below to finalize your entry:</p>
         
-        <p>If your registration is approved, you'll receive a confirmation email with a link to secure your spot for the event.</p>
+        <p style="text-align: center;">
+            👉 <a href="{{ secure_spot_link }}" class="button">Secure Your Spot</a>
+        </p>
         
-        <p>We'll be in touch soon.</p>
+        <p>We're excited to have you join us for an inspiring session on Money, Markets, Mindset & Leadership.</p>
         
-        <p>Warm regards,<br>Team MMML</p>
+        <p>See you soon,<br>Team MMML</p>
     </div>
     
     <div class="footer">
