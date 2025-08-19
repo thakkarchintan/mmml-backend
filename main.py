@@ -1,6 +1,7 @@
 import os
 from urllib.parse import quote_plus
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
@@ -13,6 +14,22 @@ from email_service import send_form_submission_emails
 load_dotenv()
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.mmml.co.in",
+        "https://mmml.co.in", 
+        "http://localhost:3000",  # For local development
+        "http://localhost:5173",  # For Vite dev server
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # Database Configuration (MySQL)
 def build_mysql_url_from_env() -> str:
