@@ -8,15 +8,33 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Email configuration
+# Get SMTP settings
+MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+
+# Determine SSL/TLS settings based on port
+if MAIL_PORT == 587:
+    # For port 587, use STARTTLS
+    MAIL_STARTTLS = True
+    MAIL_SSL_TLS = False
+elif MAIL_PORT == 465:
+    # For port 465, use SSL
+    MAIL_STARTTLS = False
+    MAIL_SSL_TLS = True
+else:
+    # For other ports, try STARTTLS by default
+    MAIL_STARTTLS = True
+    MAIL_SSL_TLS = False
+
+# Email configuration with proper SSL/TLS settings
 EMAIL_CONFIG = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME", "noreply@example.com"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", "password"),
     MAIL_FROM=os.getenv("MAIL_FROM", "noreply@example.com"),
-    MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
-    MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
+    MAIL_PORT=MAIL_PORT,
+    MAIL_SERVER=MAIL_SERVER,
+    MAIL_STARTTLS=MAIL_STARTTLS,
+    MAIL_SSL_TLS=MAIL_SSL_TLS,
     USE_CREDENTIALS=True
 )
 
