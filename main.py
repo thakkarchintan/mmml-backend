@@ -60,6 +60,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     user_id = Column(Integer, primary_key=True, index=True)
+    salutation = Column(String(10))
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
@@ -71,6 +72,7 @@ class User(Base):
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
     registration_id = Column(Integer, primary_key=True, index=True)
+    salutation = Column(String(10))
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
@@ -86,6 +88,7 @@ class EventRegistration(Base):
 class WaitlistRegistration(Base):
     __tablename__ = "waitlist_registrations"
     waitlist_id = Column(Integer, primary_key=True, index=True)
+    salutation = Column(String(10))
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
@@ -98,7 +101,9 @@ class WaitlistRegistration(Base):
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
     message_id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String(100), nullable=False)
+    salutation = Column(String(10))
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
     company_organization = Column(String(255))
     message = Column(Text, nullable=False)
@@ -107,6 +112,7 @@ class ContactMessage(Base):
 class SpeakerApplication(Base):
     __tablename__ = "speaker_applications"
     application_id = Column(Integer, primary_key=True, index=True)
+    salutation = Column(String(10))
     full_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
@@ -149,7 +155,9 @@ class PartnershipProposal(Base):
 class VolunteerApplication(Base):
     __tablename__ = "volunteer_applications"
     application_id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String(100), nullable=False)
+    salutation = Column(String(10))
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
     phone_number = Column(String(20))
     profession = Column(String(255), nullable=False)
@@ -163,6 +171,7 @@ class VolunteerApplication(Base):
 
 # Pydantic Models for Request Validation
 class UserCreate(BaseModel):
+    salutation: str | None = None
     first_name: str
     last_name: str
     email: str
@@ -171,6 +180,7 @@ class UserCreate(BaseModel):
     job_title: str | None = None
 
 class EventRegistrationCreate(BaseModel):
+    salutation: str | None = None
     first_name: str
     last_name: str
     email: str
@@ -183,6 +193,7 @@ class EventRegistrationCreate(BaseModel):
     referral_source: str | None = None
 
 class WaitlistRegistrationCreate(BaseModel):
+    salutation: str | None = None
     first_name: str
     last_name: str
     email: str
@@ -192,12 +203,15 @@ class WaitlistRegistrationCreate(BaseModel):
     reason_to_attend: str
 
 class ContactMessageCreate(BaseModel):
-    full_name: str
+    salutation: str | None = None
+    first_name: str
+    last_name: str
     email: str
     company_organization: str | None = None
     message: str
 
 class SpeakerApplicationCreate(BaseModel):
+    salutation: str | None = None
     full_name: str
     email: str
     company: str
@@ -231,7 +245,9 @@ class PartnershipProposalCreate(BaseModel):
     resources_contributed: str | None = None
 
 class VolunteerApplicationCreate(BaseModel):
-    full_name: str
+    salutation: str | None = None
+    first_name: str
+    last_name: str
     email: str
     phone_number: str | None = None
     profession: str
@@ -287,6 +303,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     
     user_name = f"{user.first_name} {user.last_name}"
     form_data = {
+        "salutation": user.salutation,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
@@ -332,6 +349,7 @@ async def create_event_registration(registration: EventRegistrationCreate, db: S
     
     user_name = f"{registration.first_name} {registration.last_name}"
     form_data = {
+        "salutation": registration.salutation,
         "first_name": registration.first_name,
         "last_name": registration.last_name,
         "email": registration.email,
@@ -380,6 +398,7 @@ async def create_waitlist_registration(registration: WaitlistRegistrationCreate,
     
     user_name = f"{registration.first_name} {registration.last_name}"
     form_data = {
+        "salutation": registration.salutation,
         "first_name": registration.first_name,
         "last_name": registration.last_name,
         "email": registration.email,
@@ -406,8 +425,11 @@ async def create_contact_message(message: ContactMessageCreate, db: Session = De
     db.commit()
     db.refresh(db_message)
     
+    user_name = f"{message.first_name} {message.last_name}"
     form_data = {
-        "full_name": message.full_name,
+        "salutation": message.salutation,
+        "first_name": message.first_name,
+        "last_name": message.last_name,
         "email": message.email,
         "company_organization": message.company_organization,
         "message": message.message,
@@ -416,7 +438,7 @@ async def create_contact_message(message: ContactMessageCreate, db: Session = De
     
     await send_form_submission_emails(
         user_email=message.email,
-        user_name=message.full_name,
+        user_name=user_name,
         form_type="Contact Message",
         form_data=form_data
     )
@@ -448,6 +470,7 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     db.refresh(db_contact)
     
     form_data = {
+        "salutation": application.salutation,
         "full_name": application.full_name,
         "email": application.email,
         "company": application.company,
@@ -550,8 +573,28 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     db.commit()
     db.refresh(db_contact)
     
+    db_contact = Contact(
+        fullname=f"{application.first_name} {application.last_name}",
+        salutation=application.salutation,
+        firstname=application.first_name,
+        lastname=application.last_name,
+        email=application.email,
+        phone=application.phone_number,
+        company=application.company,
+        designation=application.job_title,
+        status='Volunteer',
+        mmml='Yes',
+    )
+    db.add(db_contact)
+    db.commit()
+    db.refresh(db_contact)
+    
+    user_name = f"{application.first_name} {application.last_name}"
+
     form_data = {
-        "full_name": application.full_name,
+        "salutation": application.salutation,
+        "first_name": application.first_name,
+        "last_name": application.last_name,
         "email": application.email,
         "phone_number": application.phone_number,
         "profession": application.profession,
@@ -568,7 +611,7 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     
     await send_form_submission_emails(
         user_email=application.email,
-        user_name=application.full_name,
+        user_name=user_name,
         form_type="Volunteer Application",
         form_data=form_data
     )

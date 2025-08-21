@@ -1,5 +1,6 @@
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
+    salutation VARCHAR(10),
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -11,6 +12,7 @@ CREATE TABLE users (
 
 CREATE TABLE event_registrations (
     registration_id SERIAL PRIMARY KEY,
+    salutation VARCHAR(10),
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -26,6 +28,7 @@ CREATE TABLE event_registrations (
 
 CREATE TABLE waitlist_registrations (
     waitlist_id SERIAL PRIMARY KEY,
+    salutation VARCHAR(10),
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -38,7 +41,9 @@ CREATE TABLE waitlist_registrations (
 
 CREATE TABLE contact_messages (
     message_id SERIAL PRIMARY KEY,
-    full_name VARCHAR(100) NOT NULL,
+    salutation VARCHAR(10),
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     company_organization VARCHAR(255),
     message TEXT NOT NULL,
@@ -47,6 +52,7 @@ CREATE TABLE contact_messages (
 
 CREATE TABLE speaker_applications (
     application_id SERIAL PRIMARY KEY,
+    salutation VARCHAR(10),
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     company VARCHAR(255) NOT NULL,
@@ -89,7 +95,9 @@ CREATE TABLE partnership_proposals (
 
 CREATE TABLE volunteer_applications (
     application_id SERIAL PRIMARY KEY,
-    full_name VARCHAR(100) NOT NULL,
+    salutation VARCHAR(10),
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
     profession VARCHAR(255) NOT NULL,
