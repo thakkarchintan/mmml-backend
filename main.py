@@ -242,6 +242,25 @@ class VolunteerApplicationCreate(BaseModel):
     areas_of_interest: str
     motivation: str
 
+class Contact(Base):
+    __tablename__ = "crm_contacts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    salutation = Column(Text)
+    fullname = Column(Text)
+    firstname = Column(Text)
+    lastname = Column(Text)
+    email = Column(String(250), unique=True)
+    designation = Column(Text)
+    company = Column(Text)
+    phone = Column(Text)
+    status = Column(Text)
+    mmml = Column(Text)
+    fintellect = Column(Text)
+    location = Column(Text)
+    linkedin = Column(Text)
+    last_emailed = Column(DateTime)
+
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
 
@@ -293,6 +312,24 @@ async def create_event_registration(registration: EventRegistrationCreate, db: S
     db.commit()
     db.refresh(db_registration)
     
+    # Save into crm_contacts table
+    db_contact = Contact(
+        fullname=f"{registration.first_name} {registration.last_name}",
+        salutation=registration.salutation,
+        firstname=registration.first_name,
+        lastname=registration.last_name,
+        email=registration.email,
+        phone=registration.phone_number,
+        company=registration.company,
+        designation=registration.job_title,
+        status='Attendee',
+        mmml='Yes',
+    )
+    db.add(db_contact)
+    db.commit()
+    db.refresh(db_contact)
+
+    
     user_name = f"{registration.first_name} {registration.last_name}"
     form_data = {
         "first_name": registration.first_name,
@@ -323,6 +360,23 @@ async def create_waitlist_registration(registration: WaitlistRegistrationCreate,
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
+    
+        # Save into crm_contacts table
+    db_contact = Contact(
+        fullname=f"{registration.first_name} {registration.last_name}",
+        salutation=registration.salutation,
+        firstname=registration.first_name,
+        lastname=registration.last_name,
+        email=registration.email,
+        phone=registration.phone_number,
+        company=registration.company,
+        designation=registration.job_title,
+        status='Waitlisted',
+        mmml='Yes',
+    )
+    db.add(db_contact)
+    db.commit()
+    db.refresh(db_contact)
     
     user_name = f"{registration.first_name} {registration.last_name}"
     form_data = {
@@ -375,6 +429,23 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     db.add(db_application)
     db.commit()
     db.refresh(db_application)
+    
+    # Save into crm_contacts table
+    db_contact = Contact(
+        fullname=f"{application.first_name} {application.last_name}",
+        salutation=application.salutation,
+        firstname=application.first_name,
+        lastname=application.last_name,
+        email=application.email,
+        phone=application.phone_number,
+        company=application.company,
+        designation=application.job_title,
+        status='Speaker',
+        mmml='Yes',
+    )
+    db.add(db_contact)
+    db.commit()
+    db.refresh(db_contact)
     
     form_data = {
         "full_name": application.full_name,
@@ -463,6 +534,22 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     db.commit()
     db.refresh(db_application)
     
+    db_contact = Contact(
+        fullname=f"{application.first_name} {application.last_name}",
+        salutation=application.salutation,
+        firstname=application.first_name,
+        lastname=application.last_name,
+        email=application.email,
+        phone=application.phone_number,
+        company=application.company,
+        designation=application.job_title,
+        status='Volunteer',
+        mmml='Yes',
+    )
+    db.add(db_contact)
+    db.commit()
+    db.refresh(db_contact)
+    
     form_data = {
         "full_name": application.full_name,
         "email": application.email,
@@ -476,6 +563,8 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
         "motivation": application.motivation,
         "created_at": db_application.created_at.strftime("%Y-%m-%d %H:%M:%S")
     }
+    
+    
     
     await send_form_submission_emails(
         user_email=application.email,
