@@ -324,30 +324,39 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/event-registrations/")
 async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
-    db_registration = EventRegistration(**registration.model_dump())
-    db.add(db_registration)
-    db.commit()
-    db.refresh(db_registration)
-    
-    # Save into crm_contacts table
-    db_contact = Contact(
-        fullname=f"{registration.first_name} {registration.last_name}",
-        salutation=registration.salutation,
-        firstname=registration.first_name,
-        lastname=registration.last_name,
-        email=registration.email,
-        phone=registration.phone_number,
-        company=registration.company,
-        designation=registration.job_title,
-        status='Attendee',
-        mmml='Yes',
-    )
-    db.add(db_contact)
-    db.commit()
-    db.refresh(db_contact)
-
-    
     user_name = f"{registration.first_name} {registration.last_name}"
+    existing_registration = db.query(EventRegistration).filter(
+        EventRegistration.email == registration.email
+    ).first()
+
+    if not existing_registration:
+        db_registration = EventRegistration(**registration.model_dump())
+        db.add(db_registration)
+        db.commit()
+        db.refresh(db_registration)
+    else:
+        db_registration = existing_registration  # reuse existing one
+
+    existing_contact = db.query(Contact).filter(
+        Contact.email == registration.email
+    ).first()
+
+    if not existing_contact:
+        db_contact = Contact(
+            fullname=user_name,
+            salutation=registration.salutation,
+            firstname=registration.first_name,
+            lastname=registration.last_name,
+            email=registration.email,
+            phone=registration.phone_number,
+            company=registration.company,
+            designation=registration.job_title,
+            status='Attendee',
+            mmml='Yes',
+        )
+        db.add(db_contact)
+        db.commit()
+        db.refresh(db_contact)
     form_data = {
         "salutation": registration.salutation,
         "first_name": registration.first_name,
