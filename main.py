@@ -456,27 +456,38 @@ async def create_contact_message(message: ContactMessageCreate, db: Session = De
 
 @app.post("/speaker-applications/")
 async def create_speaker_application(application: SpeakerApplicationCreate, db: Session = Depends(get_db)):
-    db_application = SpeakerApplication(**application.model_dump())
-    db.add(db_application)
-    db.commit()
-    db.refresh(db_application)
+    existing_registration = db.query(SpeakerApplication).filter(
+        SpeakerApplication.email == application.email
+    ).first()
+
+    if not existing_registration:
+        db_application = SpeakerApplication(**application.model_dump())
+        db.add(db_application)
+        db.commit()
+        db.refresh(db_application)
+    else:
+        db_application = existing_registration
+
+    existing_contact = db.query(Contact).filter(
+        Contact.email == application.email
+    ).first()
     
-    # Save into crm_contacts table
-    db_contact = Contact(
-        fullname=f"{application.first_name} {application.last_name}",
-        salutation=application.salutation,
-        firstname=application.first_name,
-        lastname=application.last_name,
-        email=application.email,
-        phone=application.phone_number,
-        company=application.company,
-        designation=application.job_title,
-        status='Speaker',
-        mmml='Yes',
-    )
-    db.add(db_contact)
-    db.commit()
-    db.refresh(db_contact)
+    if not existing_contact:
+        db_contact = Contact(
+            fullname=application.full_name,
+            salutation=application.salutation,
+            firstname=None,
+            lastname=None,
+            email=application.email,
+            phone=None,
+            company=application.company,
+            designation=application.job_title,
+            status='Speaker',
+            mmml='Yes',
+        )
+        db.add(db_contact)
+        db.commit()
+        db.refresh(db_contact)
     
     form_data = {
         "salutation": application.salutation,
@@ -561,42 +572,38 @@ async def create_partnership_proposal(proposal: PartnershipProposalCreate, db: S
 
 @app.post("/volunteer-applications/")
 async def create_volunteer_application(application: VolunteerApplicationCreate, db: Session = Depends(get_db)):
-    db_application = VolunteerApplication(**application.model_dump())
-    db.add(db_application)
-    db.commit()
-    db.refresh(db_application)
+    existing_registration = db.query(VolunteerApplication).filter(
+        VolunteerApplication.email == application.email
+    ).first()
+
+    if not existing_registration:
+        db_application = VolunteerApplication(**application.model_dump())
+        db.add(db_application)
+        db.commit()
+        db.refresh(db_application)
+    else:
+        db_application = existing_registration
+
+    existing_contact = db.query(Contact).filter(
+        Contact.email == application.email
+    ).first()
     
-    db_contact = Contact(
-        fullname=f"{application.first_name} {application.last_name}",
-        salutation=application.salutation,
-        firstname=application.first_name,
-        lastname=application.last_name,
-        email=application.email,
-        phone=application.phone_number,
-        company=application.company,
-        designation=application.job_title,
-        status='Volunteer',
-        mmml='Yes',
-    )
-    db.add(db_contact)
-    db.commit()
-    db.refresh(db_contact)
-    
-    db_contact = Contact(
-        fullname=f"{application.first_name} {application.last_name}",
-        salutation=application.salutation,
-        firstname=application.first_name,
-        lastname=application.last_name,
-        email=application.email,
-        phone=application.phone_number,
-        company=application.company,
-        designation=application.job_title,
-        status='Volunteer',
-        mmml='Yes',
-    )
-    db.add(db_contact)
-    db.commit()
-    db.refresh(db_contact)
+    if not existing_contact:
+        db_contact = Contact(
+            fullname=f"{application.first_name} {application.last_name}",
+            salutation=application.salutation,
+            firstname=application.first_name,
+            lastname=application.last_name,
+            email=application.email,
+            phone=application.phone_number,
+            company=application.company_organization,
+            designation=application.profession,
+            status='Volunteer',
+            mmml='Yes',
+        )
+        db.add(db_contact)
+        db.commit()
+        db.refresh(db_contact)
     
     user_name = f"{application.first_name} {application.last_name}"
 
