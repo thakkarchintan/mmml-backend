@@ -325,18 +325,22 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @app.post("/event-registrations/")
 async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
     user_name = f"{registration.first_name} {registration.last_name}"
+
+    # Check if registration already exists
     existing_registration = db.query(EventRegistration).filter(
         EventRegistration.email == registration.email
     ).first()
 
-    if not existing_registration:
-        db_registration = EventRegistration(**registration.model_dump())
-        db.add(db_registration)
-        db.commit()
-        db.refresh(db_registration)
-    else:
-        db_registration = existing_registration  # reuse existing one
+    if existing_registration:
+        return {"status": 405, "detail": "User already exists"}
 
+    # Create new registration
+    db_registration = EventRegistration(**registration.model_dump())
+    db.add(db_registration)
+    db.commit()
+    db.refresh(db_registration)
+
+    # Check if contact already exists
     existing_contact = db.query(Contact).filter(
         Contact.email == registration.email
     ).first()
@@ -351,8 +355,8 @@ async def create_event_registration(registration: EventRegistrationCreate, db: S
             phone=registration.phone_number,
             company=registration.company,
             designation=registration.job_title,
-            status='Attendee',
-            mmml='Yes',
+            status="Attendee",
+            mmml="Yes",
         )
         db.add(db_contact)
         db.commit()
@@ -459,6 +463,9 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     existing_registration = db.query(SpeakerApplication).filter(
         SpeakerApplication.email == application.email
     ).first()
+    
+    if existing_registration:
+        return {"status": 405, "detail": "User already exists"}
 
     if not existing_registration:
         db_application = SpeakerApplication(**application.model_dump())
@@ -575,6 +582,9 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     existing_registration = db.query(VolunteerApplication).filter(
         VolunteerApplication.email == application.email
     ).first()
+    
+    if existing_registration:
+        return {"status": 405, "detail": "User already exists"}
 
     if not existing_registration:
         db_application = VolunteerApplication(**application.model_dump())
