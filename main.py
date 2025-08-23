@@ -9,6 +9,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
 from email_service import send_form_submission_emails
+import razorpay
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,7 +26,8 @@ app.add_middleware(
         "http://localhost:3000",  # For local development
         "http://localhost:5173",  # For Vite dev server
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "http://localhost:8080",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -276,6 +279,10 @@ class Contact(Base):
     location = Column(Text)
     linkedin = Column(Text)
     last_emailed = Column(DateTime)
+    
+class OrderRequest(BaseModel):
+    amount: int  # Amount in INR paise
+    email: str
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
@@ -321,6 +328,41 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     )
     
     return {"user_id": db_user.user_id}
+
+# razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")))
+
+
+# @app.post("/create-order/")
+# def create_order(
+#     order: OrderRequest, 
+# ):
+#     try:
+#         # Validate amount
+#         if order.amount not in [49900]:
+#             raise HTTPException(status_code=400, detail="Invalid subscription amount")
+
+#         # Create order on Razorpay
+#         order_data = {
+#             "amount": order.amount,  # Amount in paise
+#             "currency": "INR",
+#             "payment_capture": 1
+#         }
+
+#         order_response = razorpay_client.order.create(data=order_data)
+
+#         return {
+#             "id": order_response["id"],
+#             "currency": order_response["currency"],
+#             "amount": order_response["amount"],
+#             "status": order_response["status"]
+#         }
+
+#     except HTTPException:
+#         raise  
+#     except razorpay.errors.BadRequestError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+#     except Exception:
+#         raise HTTPException(status_code=500, detail="Failed to create order")
 
 @app.post("/event-registrations/")
 async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):

@@ -6,3 +6,4 @@ uvicorn
 python-dotenv
 fastapi-mail
 jinja2
+razorpay
