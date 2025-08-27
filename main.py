@@ -288,7 +288,6 @@ class Contact(Base):
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
-    email: str
 
 
 # Create Database Tables
