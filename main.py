@@ -1,6 +1,6 @@
 import os
 from urllib.parse import quote_plus
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends ,  Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
@@ -10,6 +10,12 @@ from dotenv import load_dotenv
 import uvicorn
 from email_service import send_form_submission_emails
 import razorpay
+
+import json, hmac, hashlib, os, logging
+from fastapi.responses import JSONResponse
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # Load environment variables from .env file
@@ -284,6 +290,7 @@ class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
     email: str
 
+
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
 
@@ -329,103 +336,234 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     
     return {"user_id": db_user.user_id}
 
-# razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")))
+razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")))
 
 
-# @app.post("/create-order/")
-# def create_order(
-#     order: OrderRequest, 
-# ):
-#     try:
-#         # Validate amount
-#         if order.amount not in [49900]:
-#             raise HTTPException(status_code=400, detail="Invalid subscription amount")
+@app.post("/create-order/")
+def create_order(
+    order: OrderRequest, 
+):
+    try:
+        # Validate amount
+        if order.amount not in [49900]:
+            raise HTTPException(status_code=400, detail="Invalid subscription amount")
 
-#         # Create order on Razorpay
-#         order_data = {
-#             "amount": order.amount,  # Amount in paise
-#             "currency": "INR",
-#             "payment_capture": 1
-#         }
+        # Create order on Razorpay
+        order_data = {
+            "amount": order.amount,  # Amount in paise
+            "currency": "INR",
+            "payment_capture": 1
+        }
 
-#         order_response = razorpay_client.order.create(data=order_data)
+        order_response = razorpay_client.order.create(data=order_data)
 
-#         return {
-#             "id": order_response["id"],
-#             "currency": order_response["currency"],
-#             "amount": order_response["amount"],
-#             "status": order_response["status"]
-#         }
+        return {
+            "id": order_response["id"],
+            "currency": order_response["currency"],
+            "amount": order_response["amount"],
+            "status": order_response["status"]
+        }
 
-#     except HTTPException:
-#         raise  
-#     except razorpay.errors.BadRequestError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception:
-#         raise HTTPException(status_code=500, detail="Failed to create order")
+    except HTTPException:
+        raise  
+    except razorpay.errors.BadRequestError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to create order")
 
-@app.post("/event-registrations/")
-async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
-    user_name = f"{registration.first_name} {registration.last_name}"
+# @app.post("/event-registrations/")
+# async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
+#     user_name = f"{registration.first_name} {registration.last_name}"
 
-    # Check if registration already exists
-    existing_registration = db.query(EventRegistration).filter(
-        EventRegistration.email == registration.email
-    ).first()
+#     # Check if registration already exists
+#     existing_registration = db.query(EventRegistration).filter(
+#         EventRegistration.email == registration.email
+#     ).first()
 
-    if existing_registration:
-        return {"status": 405, "detail": "User already exists"}
+#     if existing_registration:
+#         return {"status": 405, "detail": "User already exists"}
 
-    # Create new registration
-    db_registration = EventRegistration(**registration.model_dump())
-    db.add(db_registration)
-    db.commit()
-    db.refresh(db_registration)
+#     # Create new registration
+#     db_registration = EventRegistration(**registration.model_dump())
+#     db.add(db_registration)
+#     db.commit()
+#     db.refresh(db_registration)
 
-    # Check if contact already exists
-    existing_contact = db.query(Contact).filter(
-        Contact.email == registration.email
-    ).first()
+#     # Check if contact already exists
+#     existing_contact = db.query(Contact).filter(
+#         Contact.email == registration.email
+#     ).first()
 
-    if not existing_contact:
-        db_contact = Contact(
-            fullname=user_name,
-            salutation=registration.salutation,
-            firstname=registration.first_name,
-            lastname=registration.last_name,
-            email=registration.email,
-            phone=registration.phone_number,
-            company=registration.company,
-            designation=registration.job_title,
-            status="Attendee",
-            mmml="Yes",
+#     if not existing_contact:
+#         db_contact = Contact(
+#             fullname=user_name,
+#             salutation=registration.salutation,
+#             firstname=registration.first_name,
+#             lastname=registration.last_name,
+#             email=registration.email,
+#             phone=registration.phone_number,
+#             company=registration.company,
+#             designation=registration.job_title,
+#             status="Attendee",
+#             mmml="Yes",
+#         )
+#         db.add(db_contact)
+#         db.commit()
+#         db.refresh(db_contact)
+#     form_data = {
+#         "salutation": registration.salutation,
+#         "first_name": registration.first_name,
+#         "last_name": registration.last_name,
+#         "email": registration.email,
+#         "phone_number": registration.phone_number,
+#         "company": registration.company,
+#         "job_title": registration.job_title,
+#         "years_of_experience": registration.years_of_experience,
+#         "topics_of_interest": registration.topics_of_interest,
+#         "dietary_restrictions": registration.dietary_restrictions,
+#         "referral_source": registration.referral_source,
+#         "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
+#     }
+    
+#     await send_form_submission_emails(
+#         user_email=registration.email,
+#         user_name=user_name,
+#         form_type="Event Registration",
+#         form_data=form_data
+#     )
+    
+#     return {"registration_id": db_registration.registration_id}
+
+@app.post("/event-registration-webhook/")
+async def event_registration_webhook(
+    request: Request,
+    x_razorpay_signature: str = Header(None, alias="X-Razorpay-Signature"),
+    db: Session = Depends(get_db),
+):
+    logger.info("---- EVENT REGISTRATION WEBHOOK HIT ----")
+
+    # Read raw body
+    raw_body = await request.body()
+    if not x_razorpay_signature:
+        logger.warning("Missing Razorpay signature header.")
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "Missing Razorpay signature"},
         )
-        db.add(db_contact)
-        db.commit()
-        db.refresh(db_contact)
-    form_data = {
-        "salutation": registration.salutation,
-        "first_name": registration.first_name,
-        "last_name": registration.last_name,
-        "email": registration.email,
-        "phone_number": registration.phone_number,
-        "company": registration.company,
-        "job_title": registration.job_title,
-        "years_of_experience": registration.years_of_experience,
-        "topics_of_interest": registration.topics_of_interest,
-        "dietary_restrictions": registration.dietary_restrictions,
-        "referral_source": registration.referral_source,
-        "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    await send_form_submission_emails(
-        user_email=registration.email,
-        user_name=user_name,
-        form_type="Event Registration",
-        form_data=form_data
+
+    # Verify signature
+    RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+    expected_signature = hmac.new(
+        key=RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
+        msg=raw_body,
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, x_razorpay_signature):
+        logger.error("Signature mismatch.")
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "Invalid signature"},
+        )
+
+    # Parse JSON
+    try:
+        payload = json.loads(raw_body)
+    except Exception as e:
+        logger.exception("JSON parse error: %s", e)
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "detail": "Bad JSON"},
+        )
+        
+    event_type = payload.get("event")
+    if event_type != "payment.captured":
+        logger.info("Ignoring non-captured event: %s", event_type)
+        return {"status": "ignored"}
+
+    payment_data = (
+        payload.get("payload", {})
+        .get("payment", {})
+        .get("entity", {})
     )
-    
-    return {"registration_id": db_registration.registration_id}
+    notes = payment_data.get("notes", {}) or {}
+
+    # Extract data from notes
+    email = notes.get("email")
+    salutation = notes.get("salutation")
+    first_name = notes.get("first_name")
+    last_name = notes.get("last_name")
+    phone_number = notes.get("phone_number")
+    company = notes.get("company")
+    job_title = notes.get("job_title")
+    years_of_experience = notes.get("years_of_experience")
+    topics_of_interest = notes.get("topics_of_interest")
+    dietary_restrictions = notes.get("dietary_restrictions")
+    referral_source = notes.get("referral_source")
+
+    if not email:
+        logger.warning("Missing email in webhook notes.")
+        return JSONResponse(
+            status_code=200,  # 200 so Razorpay doesn’t retry endlessly
+            content={"status": "ignored", "reason": "missing email"},
+        )
+
+    try:
+        # Check duplicate registration
+        existing_registration = db.query(EventRegistration).filter(
+            EventRegistration.email == email
+        ).first()
+
+        if existing_registration:
+            logger.info("User already registered: %s", email)
+            return {"status": "ignored", "detail": "User already exists"}
+
+        # Create new registration
+        db_registration = EventRegistration(
+            salutation=salutation,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone_number=phone_number,
+            company=company,
+            job_title=job_title,
+            years_of_experience=years_of_experience,
+            topics_of_interest=topics_of_interest,
+            dietary_restrictions=dietary_restrictions,
+            referral_source=referral_source,
+        )
+        db.add(db_registration)
+        db.commit()
+        db.refresh(db_registration)
+
+        # Create Contact if not exists
+        existing_contact = db.query(Contact).filter(Contact.email == email).first()
+        if not existing_contact:
+            db_contact = Contact(
+                fullname=f"{first_name} {last_name}",
+                salutation=salutation,
+                firstname=first_name,
+                lastname=last_name,
+                email=email,
+                phone=phone_number,
+                company=company,
+                designation=job_title,
+                status="Attendee",
+                mmml="Yes",
+            )
+            db.add(db_contact)
+            db.commit()
+
+        logger.info("Event Registration successful for %s", email)
+        return {"status": "success"}
+
+    except Exception as e:
+        logger.exception("DB update failed: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": "DB update failed"},
+        )
+
 
 @app.post("/waitlist-registrations/")
 async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: Session = Depends(get_db)):
