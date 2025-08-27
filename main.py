@@ -339,22 +339,26 @@ razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv(
 
 
 @app.post("/create-order/")
-def create_order(
-    order: OrderRequest, 
-):
+def create_order(order: OrderRequest):
     try:
+        logger.info("Incoming create-order request: %s", order.dict())
+
         # Validate amount
         if order.amount not in [49900]:
+            logger.warning("Invalid subscription amount: %s", order.amount)
             raise HTTPException(status_code=400, detail="Invalid subscription amount")
 
-        # Create order on Razorpay
+        # Prepare order payload
         order_data = {
             "amount": order.amount,  # Amount in paise
             "currency": "INR",
             "payment_capture": 1
         }
+        logger.info("Order payload: %s", order_data)
 
+        # Call Razorpay
         order_response = razorpay_client.order.create(data=order_data)
+        logger.info("Razorpay response: %s", order_response)
 
         return {
             "id": order_response["id"],
@@ -363,11 +367,14 @@ def create_order(
             "status": order_response["status"]
         }
 
-    except HTTPException:
-        raise  
+    except HTTPException as e:
+        logger.error("HTTP Exception: %s", str(e.detail))
+        raise
     except razorpay.errors.BadRequestError as e:
+        logger.error("Razorpay BadRequestError: %s", str(e))
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
+    except Exception as e:
+        logger.exception("Unexpected error while creating order")
         raise HTTPException(status_code=500, detail="Failed to create order")
 
 # @app.post("/event-registrations/")
