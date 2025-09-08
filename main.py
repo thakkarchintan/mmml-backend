@@ -344,7 +344,7 @@ def create_order(order: OrderRequest):
         logger.info("Incoming create-order request: %s", order.dict())
 
         # Validate amount
-        if order.amount not in [49900]:
+        if order.amount not in [49900,100]:
             logger.warning("Invalid subscription amount: %s", order.amount)
             raise HTTPException(status_code=400, detail="Invalid subscription amount")
 
