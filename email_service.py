@@ -161,3 +161,42 @@ async def send_form_submission_emails(user_email: str, user_name: str, form_type
     except Exception as e:
         print(f"Error sending emails: {e}")
         return False
+    
+    from fastapi_mail import MessageSchema
+
+async def send_registration_email(to_email: str, firstname: str = None, fullname: str = None):
+    name = firstname if firstname else fullname if fullname else "Participant"
+
+    subject = "Thanks for Registering for MMML #4 – See You There!"
+
+    body = f"""
+    Dear {name},
+
+    Thank you for registering for MMML #4 happening on Sunday, 9th November, 
+    10:00 AM to 2:30 PM at National Stock Exchange, BKC, Mumbai.
+
+    We appreciate your interest in joining us for a morning of real conversations 
+    and practical insights from experienced professionals across markets, 
+    business, and leadership.
+
+    To stay updated with event announcements and join the conversation early, 
+    feel free to join our MMML WhatsApp community:
+    https://chat.whatsapp.com/BbewxC91NUAEFHOeKqGuz
+
+    If you know colleagues or friends who would benefit from this event, 
+    please do encourage them to register as well.
+
+    We’re excited to have you with us and look forward to seeing you on 9th November!
+
+    Warm regards,
+    Team MMML
+    """
+
+    message = MessageSchema(
+        subject=subject,
+        recipients=[to_email],
+        body=body,
+        subtype="plain"  # can use "html" if you want rich formatting
+    )
+
+    await fastmail.send_message(message)

@@ -8,7 +8,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
-from email_service import send_form_submission_emails
+from email_service import send_form_submission_emails , send_registration_email
 import razorpay
 
 import json, hmac, hashlib, os, logging
@@ -561,6 +561,8 @@ async def event_registration_webhook(
             db.commit()
 
         logger.info("Event Registration successful for %s", email)
+        fullname=f"{first_name} {last_name}"
+        await send_registration_email(email,first_name,fullname)
         return {"status": "success"}
 
     except Exception as e:
