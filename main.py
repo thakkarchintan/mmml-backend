@@ -3,16 +3,17 @@ from urllib.parse import quote_plus
 from fastapi import FastAPI, HTTPException, Depends ,  Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
+# from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from datetime import datetime
 from dotenv import load_dotenv
 import uvicorn
 from email_service import send_form_submission_emails , send_registration_email
 import razorpay
-
+import enum
 import json, hmac, hashlib, os, logging
 from fastapi.responses import JSONResponse
+from sqlalchemy import Column, Integer, String, Enum, DECIMAL, DateTime, Boolean, func , Text ,create_engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ class EventRegistration(Base):
     topics_of_interest = Column(Text)
     dietary_restrictions = Column(Text)
     referral_source = Column(String(100))
+    linkedin_profile = Column(String(255))   # ✅ new column
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class WaitlistRegistration(Base):
@@ -288,7 +290,33 @@ class Contact(Base):
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
+    
+class DiscountType(str, enum.Enum):
+    flat = "flat"
+    percentage = "percentage"
 
+class Coupon(Base):
+    __tablename__ = "Coupons"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    discount_type = Column(Enum(DiscountType), nullable=False)
+    discount_value = Column(DECIMAL(10, 2), nullable=False)
+    max_usage = Column(Integer, nullable=False)
+    used_count = Column(Integer, default=0)
+    expiry_date = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+# Request schema
+class ApplyCouponRequest(BaseModel):
+    coupon_code: str
+    amount: float
+
+# Response schema
+class ApplyCouponResponse(BaseModel):
+    status_code: int
+    message: str
+    final_amount: float
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
@@ -343,10 +371,10 @@ def create_order(order: OrderRequest):
     try:
         logger.info("Incoming create-order request: %s", order.dict())
 
-        # Validate amount
-        if order.amount not in [49900]:
-            logger.warning("Invalid subscription amount: %s", order.amount)
-            raise HTTPException(status_code=400, detail="Invalid subscription amount")
+        # # Validate amount
+        # if order.amount not in [49900]:
+        #     logger.warning("Invalid subscription amount: %s", order.amount)
+        #     raise HTTPException(status_code=400, detail="Invalid subscription amount")
 
         # Prepare order payload
         order_data = {
@@ -440,6 +468,36 @@ def create_order(order: OrderRequest):
     
 #     return {"registration_id": db_registration.registration_id}
 
+
+
+
+@app.post("/apply", response_model=ApplyCouponResponse)
+def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
+    coupon = db.query(Coupon).filter(Coupon.code == data.coupon_code).first()
+
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Invalid coupon code")
+    if not coupon.is_active:
+        raise HTTPException(status_code=400, detail="Coupon is inactive")
+    if coupon.expiry_date < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Coupon has expired")
+    if coupon.used_count >= coupon.max_usage:
+        raise HTTPException(status_code=400, detail="Coupon usage limit reached")
+
+    # Apply discount
+    if coupon.discount_type == DiscountType.flat:
+        discount = float(coupon.discount_value)
+    else:  # percentage
+        discount = (float(coupon.discount_value) / 100) * data.amount
+
+    final_amount = max(0, data.amount - discount)
+
+    return {
+        "status_code": 200,
+        "message": "Coupon applied successfully",
+        "final_amount": final_amount
+    }
+
 @app.post("/event-registration-webhook/")
 async def event_registration_webhook(
     request: Request,
@@ -506,6 +564,8 @@ async def event_registration_webhook(
     topics_of_interest = notes.get("topics_of_interest")
     dietary_restrictions = notes.get("dietary_restrictions")
     referral_source = notes.get("referral_source")
+    linkedin_profile = notes.get("linkedin_profile")
+    coupon_code = notes.get("coupon_code")   # ✅ added
 
     if not email:
         logger.warning("Missing email in webhook notes.")
@@ -515,6 +575,15 @@ async def event_registration_webhook(
         )
 
     try:
+        
+        if coupon_code:
+            coupon = db.query(Coupon).filter(Coupon.code == coupon_code).first()
+            if coupon:
+                coupon.used_count += 1
+                db.commit()
+                logger.info("Coupon %s used_count incremented to %s",
+                            coupon_code, coupon.used_count)
+
         # Check duplicate registration
         existing_registration = db.query(EventRegistration).filter(
             EventRegistration.email == email
@@ -537,6 +606,7 @@ async def event_registration_webhook(
             topics_of_interest=topics_of_interest,
             dietary_restrictions=dietary_restrictions,
             referral_source=referral_source,
+            linkedin_profile = linkedin_profile
         )
         db.add(db_registration)
         db.commit()
@@ -556,6 +626,7 @@ async def event_registration_webhook(
                 designation=job_title,
                 status="Attendee",
                 mmml="Yes",
+                linkedin=linkedin_profile
             )
             db.add(db_contact)
             db.commit()
