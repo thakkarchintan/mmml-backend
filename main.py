@@ -511,7 +511,7 @@ async def event_registration_webhook(
     if not x_razorpay_signature:
         logger.warning("Missing Razorpay signature header.")
         return JSONResponse(
-            status_code=400,
+            status_code=200, 
             content={"status": "error", "detail": "Missing Razorpay signature"},
         )
 
@@ -526,7 +526,7 @@ async def event_registration_webhook(
     if not hmac.compare_digest(expected_signature, x_razorpay_signature):
         logger.error("Signature mismatch.")
         return JSONResponse(
-            status_code=400,
+            status_code=200,
             content={"status": "error", "detail": "Invalid signature"},
         )
 
@@ -536,15 +536,14 @@ async def event_registration_webhook(
     except Exception as e:
         logger.exception("JSON parse error: %s", e)
         return JSONResponse(
-            status_code=400,
-            content={"status": "error", "detail": "Bad JSON"},
+            status_code=200,
+            content={"status": "ignored", "detail": "Bad JSON"},
         )
         
     event_type = payload.get("event")
     if event_type != "payment.captured":
         logger.info("Ignoring non-captured event: %s", event_type)
-        return {"status": "ignored"}
-
+        return JSONResponse(status_code=200, content={"status": "ignored", "detail": "non-captured event"})
     payment_data = (
         payload.get("payload", {})
         .get("payment", {})
@@ -633,16 +632,30 @@ async def event_registration_webhook(
 
         logger.info("Event Registration successful for %s", email)
         fullname=f"{first_name} {last_name}"
-        await send_registration_email(email,first_name,fullname)
-        return {"status": "success"}
+        try:
+            await send_registration_email(email, first_name, fullname)
+        except Exception as mail_err:
+            logger.error("Email sending failed for %s: %s", email, mail_err)
+        return JSONResponse(
+            status_code=200,
+            content={"status": "success", "detail": "user registered"},
+        )
 
     except Exception as e:
         logger.exception("DB update failed: %s", e)
         return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": "DB update failed"},
+            status_code=200,
+            content={"status": "ignored", "detail": "DB update failed"},
         )
 
+# @app.get("/send-email/")
+# async def send_email():
+#     first_name = "Pratik"
+#     last_name = "Shah"
+#     fullname=f"{first_name} {last_name}"
+#     email="pratik.ashah676@gmail.com"
+#     await send_registration_email(email,first_name,fullname)
+#     return {"message": "Email has been sent"}
 
 @app.post("/waitlist-registrations/")
 async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: Session = Depends(get_db)):
