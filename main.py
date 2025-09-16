@@ -287,6 +287,7 @@ class Contact(Base):
     location = Column(Text)
     linkedin = Column(Text)
     last_emailed = Column(DateTime)
+    mmml_time=Column(DateTime)
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
@@ -625,9 +626,13 @@ async def event_registration_webhook(
                 designation=job_title,
                 status="Attendee",
                 mmml="Yes",
+                mmml_time = datetime.now(),
                 linkedin=linkedin_profile
             )
             db.add(db_contact)
+            db.commit()
+        else :
+            existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
             db.commit()
 
         logger.info("Event Registration successful for %s", email)
@@ -762,11 +767,15 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
             company=application.company,
             designation=application.job_title,
             status='Speaker',
+            mmml_time = datetime.now(),
             mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
         db.refresh(db_contact)
+    else :
+        existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
+        db.commit()
     
     form_data = {
         "salutation": application.salutation,
@@ -881,11 +890,15 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
             company=application.company_organization,
             designation=application.profession,
             status='Volunteer',
+            mmml_time = datetime.now(),
             mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
         db.refresh(db_contact)
+    else :
+        existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
+        db.commit()
     
     user_name = f"{application.first_name} {application.last_name}"
 
