@@ -13,7 +13,7 @@ load_dotenv()
 EMAIL_CONFIG = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME", "noreply@example.com"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", "password"),
-    MAIL_FROM="MMML <hello@mmml.co.in>",
+    MAIL_FROM="hello@mmml.co.in",
     MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_STARTTLS=False,
@@ -55,7 +55,7 @@ async def send_user_confirmation_email(user_email: str, user_name: str, form_typ
         recipients=[user_email],
         body=html_content,
         subtype="html",
-        from_name="MMML <hello@mmml.co.in>"
+        from_name="MMML"
     )
     
     await fastmail.send_message(message)
@@ -79,7 +79,7 @@ async def send_admin_notification_email(form_type: str, form_data: Dict[str, Any
         recipients=[ADMIN_EMAIL],
         body=html_content,
         subtype="html",
-        from_name="MMML <hello@mmml.co.in>"
+        from_name="MMML"
     )
     
     await fastmail.send_message(message)
@@ -102,7 +102,7 @@ async def send_registration_acknowledgement_email(user_email: str, first_name: s
         recipients=[user_email],
         body=html_content,
         subtype="html",
-       from_name="MMML <hello@mmml.co.in>"
+       from_name="MMML"
     )
     
     await fastmail.send_message(message)
@@ -126,7 +126,7 @@ async def send_registration_approved_email(user_email: str, first_name: str, eve
         recipients=[user_email],
         body=html_content,
         subtype="html",
-       from_name="MMML <hello@mmml.co.in>"
+       from_name="MMML"
     )
     
     await fastmail.send_message(message)
@@ -149,7 +149,7 @@ async def send_registration_rejected_email(user_email: str, first_name: str, eve
         recipients=[user_email],
         body=html_content,
         subtype="html",
-        from_name="MMML <hello@mmml.co.in>"
+        from_name="MMML"
     )
     
     await fastmail.send_message(message)
@@ -201,7 +201,7 @@ async def send_registration_email(to_email: str, firstname: str = None, fullname
         recipients=[to_email],
         body=body,
         subtype="plain" , # can use "html" if you want rich formatting
-        from_name="MMML <hello@mmml.co.in>"
+        from_name="MMML"
     )
 
     await fastmail.send_message(message)
