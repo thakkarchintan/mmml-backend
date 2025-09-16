@@ -4,6 +4,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 from dotenv import load_dotenv
+from email.utils import formataddr
 
 # Load environment variables
 load_dotenv()
@@ -12,7 +13,7 @@ load_dotenv()
 EMAIL_CONFIG = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME", "noreply@example.com"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", "password"),
-    MAIL_FROM=os.getenv("MAIL_FROM", "noreply@example.com"),
+    MAIL_FROM="MMML <hello@mmml.co.in>",
     MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_STARTTLS=False,
@@ -53,7 +54,8 @@ async def send_user_confirmation_email(user_email: str, user_name: str, form_typ
         subject=subject,
         recipients=[user_email],
         body=html_content,
-        subtype="html"
+        subtype="html",
+        from_name="MMML <hello@mmml.co.in>"
     )
     
     await fastmail.send_message(message)
@@ -76,7 +78,8 @@ async def send_admin_notification_email(form_type: str, form_data: Dict[str, Any
         subject=subject,
         recipients=[ADMIN_EMAIL],
         body=html_content,
-        subtype="html"
+        subtype="html",
+        from_name="MMML <hello@mmml.co.in>"
     )
     
     await fastmail.send_message(message)
@@ -98,7 +101,8 @@ async def send_registration_acknowledgement_email(user_email: str, first_name: s
         subject=subject,
         recipients=[user_email],
         body=html_content,
-        subtype="html"
+        subtype="html",
+       from_name="MMML <hello@mmml.co.in>"
     )
     
     await fastmail.send_message(message)
@@ -121,7 +125,8 @@ async def send_registration_approved_email(user_email: str, first_name: str, eve
         subject=subject,
         recipients=[user_email],
         body=html_content,
-        subtype="html"
+        subtype="html",
+       from_name="MMML <hello@mmml.co.in>"
     )
     
     await fastmail.send_message(message)
@@ -143,7 +148,8 @@ async def send_registration_rejected_email(user_email: str, first_name: str, eve
         subject=subject,
         recipients=[user_email],
         body=html_content,
-        subtype="html"
+        subtype="html",
+        from_name="MMML <hello@mmml.co.in>"
     )
     
     await fastmail.send_message(message)
@@ -162,8 +168,6 @@ async def send_form_submission_emails(user_email: str, user_name: str, form_type
         print(f"Error sending emails: {e}")
         return False
     
-    from fastapi_mail import MessageSchema
-
 async def send_registration_email(to_email: str, firstname: str = None, fullname: str = None):
     name = firstname if firstname else fullname if fullname else "Participant"
 
@@ -196,7 +200,8 @@ async def send_registration_email(to_email: str, firstname: str = None, fullname
         subject=subject,
         recipients=[to_email],
         body=body,
-        subtype="plain"  # can use "html" if you want rich formatting
+        subtype="plain" , # can use "html" if you want rich formatting
+        from_name="MMML <hello@mmml.co.in>"
     )
 
     await fastmail.send_message(message)
