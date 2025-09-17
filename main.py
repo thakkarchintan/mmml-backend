@@ -14,6 +14,7 @@ import enum
 import json, hmac, hashlib, os, logging
 from fastapi.responses import JSONResponse
 from sqlalchemy import Column, Integer, String, Enum, DECIMAL, DateTime, Boolean, func , Text ,create_engine
+from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args, pool_
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+IST = ZoneInfo("Asia/Kolkata")
 # Database Models
 class User(Base):
     __tablename__ = "users"
@@ -287,7 +289,11 @@ class Contact(Base):
     location = Column(Text)
     linkedin = Column(Text)
     last_emailed = Column(DateTime)
-    mmml_time=Column(DateTime)
+    mml_time = Column(
+    DateTime,
+    default=lambda: datetime.now(IST),
+    onupdate=lambda: datetime.now(IST)
+)
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
@@ -581,6 +587,7 @@ async def event_registration_webhook(
             if coupon:
                 coupon.used_count += 1
                 db.commit()
+                db.refresh(coupon)
                 logger.info("Coupon %s used_count incremented to %s",
                             coupon_code, coupon.used_count)
 
@@ -626,13 +633,13 @@ async def event_registration_webhook(
                 designation=job_title,
                 status="Attendee",
                 mmml="Yes",
-                mmml_time = datetime.now(),
+                mmml_time = datetime.now(IST),
                 linkedin=linkedin_profile
             )
             db.add(db_contact)
             db.commit()
         else :
-            existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
+            existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
             db.commit()
 
         logger.info("Event Registration successful for %s", email)
@@ -767,14 +774,14 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
             company=application.company,
             designation=application.job_title,
             status='Speaker',
-            mmml_time = datetime.now(),
+            mmml_time = datetime.now(IST),
             mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
         db.refresh(db_contact)
     else :
-        existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
+        existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
         db.commit()
     
     form_data = {
@@ -890,14 +897,14 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
             company=application.company_organization,
             designation=application.profession,
             status='Volunteer',
-            mmml_time = datetime.now(),
+            mmml_time = datetime.now(IST),
             mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
         db.refresh(db_contact)
     else :
-        existing_contact.mmml_time = datetime.now()  # ✅ update timestamp
+        existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
         db.commit()
     
     user_name = f"{application.first_name} {application.last_name}"
