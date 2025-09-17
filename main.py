@@ -598,7 +598,6 @@ async def event_registration_webhook(
 
         if existing_registration:
             logger.info("User already registered: %s", email)
-            return {"status": "ignored", "detail": "User already exists"}
 
         # Create new registration
         db_registration = EventRegistration(
@@ -641,7 +640,7 @@ async def event_registration_webhook(
         else :
             existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
             db.commit()
-            logger.info("Updated mmmL time  %s", datetime.now(IST))
+            logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
 
         logger.info("Event Registration successful for %s", email)
         fullname=f"{first_name} {last_name}"
