@@ -289,11 +289,7 @@ class Contact(Base):
     location = Column(Text)
     linkedin = Column(Text)
     last_emailed = Column(DateTime)
-    mml_time = Column(
-    DateTime,
-    default=lambda: datetime.now(IST),
-    onupdate=lambda: datetime.now(IST)
-)
+    mml_time = Column(DateTime)
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
