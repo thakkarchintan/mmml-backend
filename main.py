@@ -289,7 +289,7 @@ class Contact(Base):
     location = Column(Text)
     linkedin = Column(Text)
     last_emailed = Column(DateTime)
-    mml_time = Column(DateTime)
+    mmml_time = Column(DateTime)
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
