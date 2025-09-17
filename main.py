@@ -288,6 +288,7 @@ class Contact(Base):
     fintellect = Column(Text)
     location = Column(Text)
     linkedin = Column(Text)
+    coupon_code = Column(Text)
     last_emailed = Column(DateTime)
     mmml_time = Column(DateTime)
     
@@ -629,6 +630,7 @@ async def event_registration_webhook(
                 status="Attendee",
                 mmml="Yes",
                 mmml_time = datetime.now(IST),
+                coupon_code = coupon_code,
                 linkedin=linkedin_profile
             )
             db.add(db_contact)
