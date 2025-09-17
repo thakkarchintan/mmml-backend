@@ -595,24 +595,24 @@ async def event_registration_webhook(
         if existing_registration:
             logger.info("User already registered: %s", email)
 
-        # Create new registration
-        db_registration = EventRegistration(
-            salutation=salutation,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            phone_number=phone_number,
-            company=company,
-            job_title=job_title,
-            years_of_experience=years_of_experience,
-            topics_of_interest=topics_of_interest,
-            dietary_restrictions=dietary_restrictions,
-            referral_source=referral_source,
-            linkedin_profile = linkedin_profile
-        )
-        db.add(db_registration)
-        db.commit()
-        db.refresh(db_registration)
+        if not existing_registration:
+            db_registration = EventRegistration(
+                salutation=salutation,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone_number=phone_number,
+                company=company,
+                job_title=job_title,
+                years_of_experience=years_of_experience,
+                topics_of_interest=topics_of_interest,
+                dietary_restrictions=dietary_restrictions,
+                referral_source=referral_source,
+                linkedin_profile = linkedin_profile
+            )
+            db.add(db_registration)
+            db.commit()
+            db.refresh(db_registration)
 
         # Create Contact if not exists
         existing_contact = db.query(Contact).filter(Contact.email == email).first()
