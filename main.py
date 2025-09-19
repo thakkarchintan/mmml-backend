@@ -659,7 +659,7 @@ async def event_registration_webhook(
         
             db_payment = ProcessedPayment(payment_id=payment_id)
             db.add(db_payment)
-            
+        db.commit()  # ensures all changes are persisted    
         logger.info("Event Registration successful for %s", email)
         fullname=f"{first_name} {last_name}"
         background_tasks.add_task(send_registration_email, email, first_name, fullname)
