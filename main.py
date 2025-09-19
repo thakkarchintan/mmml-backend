@@ -15,6 +15,7 @@ import json, hmac, hashlib, os, logging
 from fastapi.responses import JSONResponse
 from sqlalchemy import Column, Integer, String, Enum, DECIMAL, DateTime, Boolean, func , Text ,create_engine
 from zoneinfo import ZoneInfo
+from fastapi import BackgroundTasks
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -321,6 +322,13 @@ class ApplyCouponResponse(BaseModel):
     status_code: int
     message: str
     final_amount: float
+    
+class ProcessedPayment(Base):
+    __tablename__ = "processed_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    payment_id = Column(String(100), unique=True, nullable=False)  # Razorpay ID
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
@@ -505,6 +513,7 @@ def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
 @app.post("/event-registration-webhook/")
 async def event_registration_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_razorpay_signature: str = Header(None, alias="X-Razorpay-Signature"),
     db: Session = Depends(get_db),
 ):
@@ -515,7 +524,7 @@ async def event_registration_webhook(
     if not x_razorpay_signature:
         logger.warning("Missing Razorpay signature header.")
         return JSONResponse(
-            status_code=200, 
+            status_code=400, 
             content={"status": "error", "detail": "Missing Razorpay signature"},
         )
 
@@ -530,7 +539,7 @@ async def event_registration_webhook(
     if not hmac.compare_digest(expected_signature, x_razorpay_signature):
         logger.error("Signature mismatch.")
         return JSONResponse(
-            status_code=200,
+            status_code=400,
             content={"status": "error", "detail": "Invalid signature"},
         )
 
@@ -540,7 +549,7 @@ async def event_registration_webhook(
     except Exception as e:
         logger.exception("JSON parse error: %s", e)
         return JSONResponse(
-            status_code=200,
+            status_code=400,
             content={"status": "ignored", "detail": "Bad JSON"},
         )
         
@@ -553,6 +562,17 @@ async def event_registration_webhook(
         .get("payment", {})
         .get("entity", {})
     )
+    payment_id = payment_data.get("id")
+    
+    existing_payment = db.query(ProcessedPayment).filter(
+        ProcessedPayment.payment_id == payment_id
+    ).first()
+    
+    if existing_payment:
+        logger.info("Duplicate webhook for payment_id %s ignored", payment_id)
+        return JSONResponse(status_code=200, content={"status": "success", "detail": "already processed"})
+
+
     notes = payment_data.get("notes", {}) or {}
 
     # Extract data from notes
@@ -578,74 +598,72 @@ async def event_registration_webhook(
         )
 
     try:
+            # Start transaction
+        with db.begin():
+            if coupon_code:
+                updated = db.query(Coupon).filter(
+                    Coupon.code == coupon_code,
+                    Coupon.used_count < Coupon.max_usage
+                ).update({Coupon.used_count: Coupon.used_count + 1})
+            
+                if not updated:
+                    logger.warning("Coupon %s usage exceeded or not found", coupon_code)
+
+            # Check duplicate registration
+            existing_registration = db.query(EventRegistration).filter(
+                EventRegistration.email == email
+            ).first()
+
+            if existing_registration:
+                logger.info("User already registered: %s", email)
+
+            if not existing_registration:
+                db_registration = EventRegistration(
+                    salutation=salutation,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    phone_number=phone_number,
+                    company=company,
+                    job_title=job_title,
+                    years_of_experience=years_of_experience,
+                    topics_of_interest=topics_of_interest,
+                    dietary_restrictions=dietary_restrictions,
+                    referral_source=referral_source,
+                    linkedin_profile = linkedin_profile
+                )
+                db.add(db_registration)
+
+            # Create Contact if not exists
+            existing_contact = db.query(Contact).filter(Contact.email == email).first()
+            if not existing_contact:
+                db_contact = Contact(
+                    fullname=f"{first_name} {last_name}",
+                    salutation=salutation,
+                    firstname=first_name,
+                    lastname=last_name,
+                    email=email,
+                    phone=phone_number,
+                    company=company,
+                    designation=job_title,
+                    status="Attendee",
+                    mmml="Yes",
+                    mmml_time = datetime.now(IST),
+                    coupon_code = coupon_code,
+                    linkedin=linkedin_profile
+                )
+                db.add(db_contact)
+            else :
+                existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
+                logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
         
-        if coupon_code:
-            coupon = db.query(Coupon).filter(Coupon.code == coupon_code).first()
-            if coupon:
-                coupon.used_count += 1
-                db.commit()
-                db.refresh(coupon)
-                logger.info("Coupon %s used_count incremented to %s",
-                            coupon_code, coupon.used_count)
-
-        # Check duplicate registration
-        existing_registration = db.query(EventRegistration).filter(
-            EventRegistration.email == email
-        ).first()
-
-        if existing_registration:
-            logger.info("User already registered: %s", email)
-
-        if not existing_registration:
-            db_registration = EventRegistration(
-                salutation=salutation,
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                phone_number=phone_number,
-                company=company,
-                job_title=job_title,
-                years_of_experience=years_of_experience,
-                topics_of_interest=topics_of_interest,
-                dietary_restrictions=dietary_restrictions,
-                referral_source=referral_source,
-                linkedin_profile = linkedin_profile
-            )
-            db.add(db_registration)
-            db.commit()
-            db.refresh(db_registration)
-
-        # Create Contact if not exists
-        existing_contact = db.query(Contact).filter(Contact.email == email).first()
-        if not existing_contact:
-            db_contact = Contact(
-                fullname=f"{first_name} {last_name}",
-                salutation=salutation,
-                firstname=first_name,
-                lastname=last_name,
-                email=email,
-                phone=phone_number,
-                company=company,
-                designation=job_title,
-                status="Attendee",
-                mmml="Yes",
-                mmml_time = datetime.now(IST),
-                coupon_code = coupon_code,
-                linkedin=linkedin_profile
-            )
-            db.add(db_contact)
-            db.commit()
-        else :
-            existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
-            db.commit()
-            logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
-
+            db_payment = ProcessedPayment(payment_id=payment_id)
+            db.add(db_payment)
+            
         logger.info("Event Registration successful for %s", email)
         fullname=f"{first_name} {last_name}"
-        try:
-            await send_registration_email(email, first_name, fullname)
-        except Exception as mail_err:
-            logger.error("Email sending failed for %s: %s", email, mail_err)
+        background_tasks.add_task(send_registration_email, email, first_name, fullname)
+        
         return JSONResponse(
             status_code=200,
             content={"status": "success", "detail": "user registered"},
