@@ -599,7 +599,7 @@ async def event_registration_webhook(
 
     try:
             # Start transaction
-        with db.begin():
+        with db.begin_nested():
             if coupon_code:
                 updated = db.query(Coupon).filter(
                     Coupon.code == coupon_code,
