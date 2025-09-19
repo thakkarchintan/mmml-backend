@@ -506,7 +506,7 @@ def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
 
     return {
         "status_code": 200,
-        "message": f"Discount of {final_amount} applied",
+        "message": f"Discount of {discount} applied",
         "final_amount": final_amount
     }
 
