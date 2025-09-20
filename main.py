@@ -678,8 +678,8 @@ async def event_registration_webhook(
 
 # @app.get("/send-email/")
 # async def send_email():
-#     first_name = "Pratik"
-#     last_name = "Shah"
+#     first_name = "Virat"
+#     last_name = "Kohli"
 #     fullname=f"{first_name} {last_name}"
 #     email="pratik.ashah676@gmail.com"
 #     await send_registration_email(email,first_name,fullname)

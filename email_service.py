@@ -174,33 +174,30 @@ async def send_registration_email(to_email: str, firstname: str = None, fullname
     subject = "Thanks for Registering for MMML #4 – See You There!"
 
     body = f"""
-    Dear {name},
+    <p>Dear {name},</p>
 
-    Thank you for registering for MMML #4 happening on Sunday, 9th November, 
-    10:00 AM to 2:30 PM at National Stock Exchange, BKC, Mumbai.
+    <p>Thank you for registering for <b>MMML #4</b> happening on <b>Sunday, 9th November</b>,
+    10:00 AM to 2:30 PM at National Stock Exchange, BKC, Mumbai.</p>
 
-    We appreciate your interest in joining us for a morning of real conversations 
-    and practical insights from experienced professionals across markets, 
-    business, and leadership.
+    <p>We appreciate your interest in joining us for a morning of real conversations and 
+    practical insights from experienced professionals across markets, business, and leadership.</p>
 
-    To stay updated with event announcements and join the conversation early, 
-    feel free to join our MMML WhatsApp community:
-    https://chat.whatsapp.com/BbewxC91NUAEFHOeKqGuz
+    <p>To stay updated with event announcements and join the conversation early, 
+    feel free to join our <a href="https://chat.whatsapp.com/BbewxC91NUAEFHOeKqGuz">MMML WhatsApp community</a>.</p>
 
-    If you know colleagues or friends who would benefit from this event, 
-    please do encourage them to register as well.
+    <p>If you know colleagues or friends who would benefit from this event, 
+    please do encourage them to register as well.</p>
 
-    We’re excited to have you with us and look forward to seeing you on 9th November!
+    <p>We’re excited to have you with us and look forward to seeing you on 9th November!</p>
 
-    Warm regards,
-    Team MMML
+    <p>Warm regards,<br>Team MMML</p>
     """
 
     message = MessageSchema(
         subject=subject,
         recipients=[to_email],
         body=body,
-        subtype="plain" , # can use "html" if you want rich formatting
+        subtype="html" , # can use "html" if you want rich formatting
         from_name="MMML"
     )
 
