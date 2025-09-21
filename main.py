@@ -655,6 +655,9 @@ async def event_registration_webhook(
                 db.add(db_contact)
             else :
                 existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
+                existing_contact.mmml = 'Yes'
+                existing_contact.coupon_code=coupon_code
+                existing_contact.status="Attendee"
                 logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
         
             db_payment = ProcessedPayment(payment_id=payment_id)
