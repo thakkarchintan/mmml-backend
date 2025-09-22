@@ -450,7 +450,6 @@ def create_order(order: OrderRequest):
 #             phone=registration.phone_number,
 #             company=registration.company,
 #             designation=registration.job_title,
-#             status="Attendee",
 #             mmml="Yes",
 #         )
 #         db.add(db_contact)
@@ -646,7 +645,6 @@ async def event_registration_webhook(
                     phone=phone_number,
                     company=company,
                     designation=job_title,
-                    status="Attendee",
                     mmml="Yes",
                     mmml_time = datetime.now(IST),
                     coupon_code = coupon_code,
@@ -657,7 +655,6 @@ async def event_registration_webhook(
                 existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
                 existing_contact.mmml = 'Yes'
                 existing_contact.coupon_code=coupon_code
-                existing_contact.status="Attendee"
                 logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
         
             db_payment = ProcessedPayment(payment_id=payment_id)
@@ -705,7 +702,6 @@ async def create_waitlist_registration(registration: WaitlistRegistrationCreate,
         phone=registration.phone_number,
         company=registration.company,
         designation=registration.job_title,
-        status='Waitlisted',
         mmml='Yes',
     )
     db.add(db_contact)
@@ -792,7 +788,6 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
             phone=None,
             company=application.company,
             designation=application.job_title,
-            status='Speaker',
             mmml_time = datetime.now(IST),
             mmml='Yes',
         )
@@ -915,7 +910,6 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
             phone=application.phone_number,
             company=application.company_organization,
             designation=application.profession,
-            status='Volunteer',
             mmml_time = datetime.now(IST),
             mmml='Yes',
         )
