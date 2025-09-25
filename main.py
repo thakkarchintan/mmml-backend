@@ -774,29 +774,29 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
     else:
         db_application = existing_registration
 
-    existing_contact = db.query(Contact).filter(
-        Contact.email == application.email
-    ).first()
+    # existing_contact = db.query(Contact).filter(
+    #     Contact.email == application.email
+    # ).first()
     
-    if not existing_contact:
-        db_contact = Contact(
-            fullname=application.full_name,
-            salutation=application.salutation,
-            firstname=None,
-            lastname=None,
-            email=application.email,
-            phone=None,
-            company=application.company,
-            designation=application.job_title,
-            mmml_time = datetime.now(IST),
-            # mmml='Yes',
-        )
-        db.add(db_contact)
-        db.commit()
-        db.refresh(db_contact)
-    else :
-        existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
-        db.commit()
+    # if not existing_contact:
+    #     db_contact = Contact(
+    #         fullname=application.full_name,
+    #         salutation=application.salutation,
+    #         firstname=None,
+    #         lastname=None,
+    #         email=application.email,
+    #         phone=None,
+    #         company=application.company,
+    #         designation=application.job_title,
+    #         mmml_time = datetime.now(IST),
+    #         # mmml='Yes',
+    #     )
+    #     db.add(db_contact)
+    #     db.commit()
+    #     db.refresh(db_contact)
+    # else :
+    #     existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
+    #     db.commit()
     
     form_data = {
         "salutation": application.salutation,
@@ -896,29 +896,29 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
     else:
         db_application = existing_registration
 
-    existing_contact = db.query(Contact).filter(
-        Contact.email == application.email
-    ).first()
+    # existing_contact = db.query(Contact).filter(
+    #     Contact.email == application.email
+    # ).first()
     
-    if not existing_contact:
-        db_contact = Contact(
-            fullname=f"{application.first_name} {application.last_name}",
-            salutation=application.salutation,
-            firstname=application.first_name,
-            lastname=application.last_name,
-            email=application.email,
-            phone=application.phone_number,
-            company=application.company_organization,
-            designation=application.profession,
-            mmml_time = datetime.now(IST),
-            # mmml='Yes',
-        )
-        db.add(db_contact)
-        db.commit()
-        db.refresh(db_contact)
-    else :
-        existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
-        db.commit()
+    # if not existing_contact:
+    #     db_contact = Contact(
+    #         fullname=f"{application.first_name} {application.last_name}",
+    #         salutation=application.salutation,
+    #         firstname=application.first_name,
+    #         lastname=application.last_name,
+    #         email=application.email,
+    #         phone=application.phone_number,
+    #         company=application.company_organization,
+    #         designation=application.profession,
+    #         mmml_time = datetime.now(IST),
+    #         # mmml='Yes',
+    #     )
+    #     db.add(db_contact)
+    #     db.commit()
+    #     db.refresh(db_contact)
+    # else :
+    #     existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
+    #     db.commit()
     
     user_name = f"{application.first_name} {application.last_name}"
 
