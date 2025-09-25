@@ -789,7 +789,7 @@ async def create_speaker_application(application: SpeakerApplicationCreate, db: 
             company=application.company,
             designation=application.job_title,
             mmml_time = datetime.now(IST),
-            mmml='Yes',
+            # mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
@@ -911,7 +911,7 @@ async def create_volunteer_application(application: VolunteerApplicationCreate, 
             company=application.company_organization,
             designation=application.profession,
             mmml_time = datetime.now(IST),
-            mmml='Yes',
+            # mmml='Yes',
         )
         db.add(db_contact)
         db.commit()
