@@ -588,7 +588,7 @@ async def event_registration_webhook(
     referral_source = notes.get("referral_source")
     linkedin_profile = notes.get("linkedin_profile")
     coupon_code = notes.get("coupon_code")   # ✅ added
-
+    designation = notes.get("designation")
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
@@ -648,7 +648,8 @@ async def event_registration_webhook(
                     mmml="Yes",
                     mmml_time = datetime.now(IST),
                     coupon_code = coupon_code,
-                    linkedin=linkedin_profile
+                    linkedin=linkedin_profile,
+                    designation=designation
                 )
                 db.add(db_contact)
             else :
