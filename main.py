@@ -649,7 +649,6 @@ async def event_registration_webhook(
                     mmml_time = datetime.now(IST),
                     coupon_code = coupon_code,
                     linkedin=linkedin_profile,
-                    designation=designation
                 )
                 db.add(db_contact)
             else :
