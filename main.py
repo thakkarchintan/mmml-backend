@@ -292,6 +292,9 @@ class Contact(Base):
     coupon_code = Column(Text)
     last_emailed = Column(DateTime)
     mmml_time = Column(DateTime)
+    years_of_experience = Column(String(20), nullable=False)
+    dietary_preference = Column(String(20), nullable=False)
+    about_mmml = Column(String(20))
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
@@ -648,6 +651,9 @@ async def event_registration_webhook(
                     mmml="Yes",
                     mmml_time = datetime.now(IST),
                     coupon_code = coupon_code,
+                    years_of_experience = years_of_experience,
+                    dietary_preference = dietary_restrictions,
+                    about_mmml = referral_source,
                     linkedin=linkedin_profile,
                 )
                 db.add(db_contact)
