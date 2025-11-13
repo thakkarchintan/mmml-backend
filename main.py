@@ -101,16 +101,11 @@ class EventRegistration(Base):
 
 class WaitlistRegistration(Base):
     __tablename__ = "waitlist_registrations"
-    waitlist_id = Column(Integer, primary_key=True, index=True)
     salutation = Column(String(10))
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False)
-    phone_number = Column(String(20), nullable=False)
-    company = Column(String(255))
-    job_title = Column(String(255))
-    reason_to_attend = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    city = Column(String(100), nullable=False)
 
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
@@ -211,10 +206,7 @@ class WaitlistRegistrationCreate(BaseModel):
     first_name: str
     last_name: str
     email: str
-    phone_number: str
-    company: str | None = None
-    job_title: str | None = None
-    reason_to_attend: str
+    city: str
 
 class ContactMessageCreate(BaseModel):
     salutation: str | None = None
@@ -691,50 +683,46 @@ async def event_registration_webhook(
 #     await send_registration_email(email,first_name,fullname)
 #     return {"message": "Email has been sent"}
 
+from sqlalchemy.exc import IntegrityError
+
+
 @app.post("/waitlist-registrations/")
-async def create_waitlist_registration(registration: WaitlistRegistrationCreate, db: Session = Depends(get_db)):
-    db_registration = WaitlistRegistration(**registration.model_dump())
-    db.add(db_registration)
-    db.commit()
-    db.refresh(db_registration)
-    
-        # Save into crm_contacts table
-    db_contact = Contact(
-        fullname=f"{registration.first_name} {registration.last_name}",
-        salutation=registration.salutation,
-        firstname=registration.first_name,
-        lastname=registration.last_name,
-        email=registration.email,
-        phone=registration.phone_number,
-        company=registration.company,
-        designation=registration.job_title,
-        mmml='Yes',
+async def create_waitlist_registration(
+    reg: WaitlistRegistrationCreate,
+    db: Session = Depends(get_db)
+):
+    # check duplicate
+    exists = db.query(Contact).filter(Contact.email == reg.email).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    # create contact
+    contact = Contact(
+        salutation=reg.salutation,
+        firstname=reg.first_name,
+        lastname=reg.last_name,
+        fullname=f"{reg.first_name} {reg.last_name}",
+        email=reg.email,
+        location=reg.city,
+        mmml="waitlisted",
+        years_of_experience="0",          # default since NOT NULL
+        dietary_preference="none"         # default since NOT NULL
     )
-    db.add(db_contact)
-    db.commit()
-    db.refresh(db_contact)
-    
-    user_name = f"{registration.first_name} {registration.last_name}"
-    form_data = {
-        "salutation": registration.salutation,
-        "first_name": registration.first_name,
-        "last_name": registration.last_name,
-        "email": registration.email,
-        "phone_number": registration.phone_number,
-        "company": registration.company,
-        "job_title": registration.job_title,
-        "reason_to_attend": registration.reason_to_attend,
-        "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+    # save
+    try:
+        db.add(contact)
+        db.commit()
+        db.refresh(contact)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Failed to save")
+
+    return {
+        "status_code": 201,
+        "message": "Waitlist entry created",
+        "data": {"id": contact.id}
     }
-    
-    await send_form_submission_emails(
-        user_email=registration.email,
-        user_name=user_name,
-        form_type="Waitlist Registration",
-        form_data=form_data
-    )
-    
-    return {"waitlist_id": db_registration.waitlist_id}
 
 @app.post("/contact-messages/")
 async def create_contact_message(message: ContactMessageCreate, db: Session = Depends(get_db)):
