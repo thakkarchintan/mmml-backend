@@ -99,13 +99,6 @@ class EventRegistration(Base):
     linkedin_profile = Column(String(255))   # ✅ new column
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class WaitlistRegistration(Base):
-    __tablename__ = "waitlist_registrations"
-    salutation = Column(String(10))
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
-    email = Column(String(255), nullable=False)
-    city = Column(String(100), nullable=False)
 
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
@@ -287,6 +280,7 @@ class Contact(Base):
     years_of_experience = Column(String(20), nullable=False)
     dietary_preference = Column(String(20), nullable=False)
     about_mmml = Column(String(20))
+    mmml_membership_application=Column(Text)
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
@@ -324,6 +318,14 @@ class ProcessedPayment(Base):
     id = Column(Integer, primary_key=True, index=True)
     payment_id = Column(String(100), unique=True, nullable=False)  # Razorpay ID
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+class MembershipApplicationCreate(BaseModel):
+    full_name: str
+    email: str
+    company: str
+    title: str
+    linkedin: str | None = None
+
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
@@ -704,7 +706,7 @@ async def create_waitlist_registration(
         fullname=f"{reg.first_name} {reg.last_name}",
         email=reg.email,
         location=reg.city,
-        mmml="waitlisted",
+        status="waitlisted",
         years_of_experience="0",          # default since NOT NULL
         dietary_preference="none"         # default since NOT NULL
     )
@@ -723,6 +725,46 @@ async def create_waitlist_registration(
         "message": "Waitlist entry created",
         "data": {"id": contact.id}
     }
+
+@app.post("/membership-applications/")
+def submit_membership_application(
+    data: MembershipApplicationCreate,
+    db: Session = Depends(get_db)
+):
+    # check duplicate
+    exists = db.query(Contact).filter(Contact.email == data.email).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    # split full name
+    parts = data.full_name.strip().split(" ")
+    firstname = parts[0]
+    lastname = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+    # save into crm_contacts
+    entry = Contact(
+        fullname=data.full_name,
+        firstname=firstname,
+        lastname=lastname,
+        email=data.email,
+        company=data.company,
+        linkedin=data.linkedin,
+        mmml_membership_application="membership_waitlisted",  # important flag
+        years_of_experience="0",
+        dietary_preference="none",
+    )
+
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+
+    return {
+        "status_code": 201,
+        "message": "Membership Application submitted successfully",
+        "data": {"id": entry.id}
+    }
+
+
 
 @app.post("/contact-messages/")
 async def create_contact_message(message: ContactMessageCreate, db: Session = Depends(get_db)):
