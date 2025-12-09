@@ -696,7 +696,19 @@ async def create_waitlist_registration(
     # check duplicate
     exists = db.query(Contact).filter(Contact.email == reg.email).first()
     if exists:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        exists.status = "waitlisted"
+        try:
+            db.commit()
+            db.refresh(exists)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Failed to update status")
+
+        return {
+            "status_code": 200,
+            "message": "Existing contact updated to waitlisted",
+            "data": {"id": exists.id}
+        }
 
     # create contact
     contact = Contact(
@@ -734,7 +746,19 @@ def submit_membership_application(
     # check duplicate
     exists = db.query(Contact).filter(Contact.email == data.email).first()
     if exists:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        exists.mmml_membership_application = "membership_waitlisted"
+        try:
+            db.commit()
+            db.refresh(exists)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Failed to update status")
+
+        return {
+            "status_code": 200,
+            "message": "Existing contact updated to waitlisted",
+            "data": {"id": exists.id}
+        }
 
     # split full name
     parts = data.full_name.strip().split(" ")
