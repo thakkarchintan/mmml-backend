@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 # from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
-from datetime import datetime
+# CORRECT 👇
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import uvicorn
 from email_service import send_form_submission_emails , send_registration_email
@@ -16,6 +17,12 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import Column, Integer, String, Enum, DECIMAL, DateTime, Boolean, func , Text ,create_engine
 from zoneinfo import ZoneInfo
 from fastapi import BackgroundTasks
+from jose import jwt
+from passlib.context import CryptContext
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +49,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 # Database Configuration (MySQL)
 def build_mysql_url_from_env() -> str:
@@ -72,15 +80,12 @@ IST = ZoneInfo("Asia/Kolkata")
 # Database Models
 class User(Base):
     __tablename__ = "users"
-    user_id = Column(Integer, primary_key=True, index=True)
-    salutation = Column(String(10))
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
+
+    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=False)
-    phone_number = Column(String(20), nullable=False)
-    company = Column(String(255))
-    job_title = Column(String(255))
+    password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
@@ -97,6 +102,7 @@ class EventRegistration(Base):
     dietary_restrictions = Column(Text)
     referral_source = Column(String(100))
     linkedin_profile = Column(String(255))   # ✅ new column
+    Venue = Column(String(20))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -192,7 +198,8 @@ class EventRegistrationCreate(BaseModel):
     years_of_experience: str | None = None
     topics_of_interest: str | None = None
     dietary_restrictions: str | None = None
-    referral_source: str | None = None
+  
+
 
 class WaitlistRegistrationCreate(BaseModel):
     salutation: str | None = None
@@ -281,6 +288,9 @@ class Contact(Base):
     dietary_preference = Column(String(20), nullable=False)
     about_mmml = Column(String(20))
     mmml_membership_application=Column(Text)
+    MMML_Account = Column(String(20))
+    Mum = Column(String(20))
+    Blr = Column(String(20))
     
 class OrderRequest(BaseModel):
     amount: int  # Amount in INR paise
@@ -325,10 +335,54 @@ class MembershipApplicationCreate(BaseModel):
     company: str
     title: str
     linkedin: str | None = None
+    
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+class GoogleAuthRequest(BaseModel):
+    token: str  # OAuth access token from frontend
+    
+class LoggedInUserResponse(BaseModel):
+    salutation: str | None
+    first_name: str | None
+    last_name: str | None
+    email: str
+    phone: str | None
+    company: str | None
+    designation: str | None
+    location: str | None
+    linkedin: str | None
+    years_of_experience: str | None
+    dietary_preference: str | None
+
+
+class CheckAccountRequest(BaseModel):
+    email: str
 
 
 # Create Database Tables
 Base.metadata.create_all(bind=engine)
+
+# ---------- CONFIG ----------
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGO = os.getenv("JWT_ALGORITHM", "HS256")
+pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")  # add to .env
+import requests as http
+
+def verify_google_token(token: str):
+    resp = http.get(
+        GOOGLE_USERINFO_URL,
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    if resp.status_code != 200:
+        return None
+    return resp.json()
+
+
 
 # Dependency to get DB session
 def get_db():
@@ -337,40 +391,203 @@ def get_db():
         yield db
     finally:
         db.close()
+        
+def create_token(data: dict):
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGO)
+
+def get_current_user_email(authorization: str = Header(...)) -> str:
+    try:
+        token = authorization.replace("Bearer ", "")
+        print("Token received:", token)
+        payload = jwt.decode(
+            token,
+            os.getenv("JWT_SECRET_KEY"),
+            algorithms=os.getenv("JWT_ALGORITHM", "HS256")
+        )
+        print("Decoded payload:", payload)
+        return payload.get("email")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 
 # Root endpoint
 @app.get("/")
 async def root():
     return {"message": "Welcome to MMML Backend API", "docs": "/docs"}
 
-# API Endpoints
-@app.post("/users/")
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = User(**user.model_dump())
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    user_name = f"{user.first_name} {user.last_name}"
-    form_data = {
-        "salutation": user.salutation,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "email": user.email,
-        "phone_number": user.phone_number,
-        "company": user.company,
-        "job_title": user.job_title,
-        "created_at": db_user.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+@app.get("/fetch-logged-in-user/")
+def get_logged_in_user(
+    email: str = Depends(get_current_user_email),
+    db: Session = Depends(lambda: SessionLocal())
+):
+    contact = (
+        db.query(Contact)
+        .filter(
+            Contact.email == email,
+            Contact.MMML_Account.ilike("Yes")
+        )
+        .first()
+    )
+
+    if not contact:
+        raise HTTPException(
+            status_code=403,
+            detail="User does not have an active MMML account"
+        )
+
+    return {
+        "status_code": 200,
+        "data": {
+            "salutation": contact.salutation,
+            "first_name": contact.firstname,
+            "last_name": contact.lastname,
+            "email": contact.email,
+            "phone": contact.phone,
+            "company": contact.company,
+            "designation": contact.designation,
+            "location": contact.location,
+            "linkedin": contact.linkedin,
+            "years_of_experience": contact.years_of_experience,
+            "dietary_preference": contact.dietary_preference,
+        },
+    }
+
+@app.post("/check-account/")
+def check_account(
+    payload: CheckAccountRequest,
+    db: Session = Depends(lambda: SessionLocal())
+):
+    contact = (
+        db.query(Contact)
+        .filter(Contact.email == payload.email)
+        .first()
+    )
+
+    if not contact:
+        return {
+            "status_code": 200,
+            "data": {
+                "exists": False,
+                "has_mmml_account": False,
+            },
+        }
+
+    return {
+        "status_code": 200,
+        "data": {
+            "exists": True,
+            "has_mmml_account": (
+                contact.MMML_Account is not None
+                and contact.MMML_Account.lower() == "yes"
+            ),
+        },
     }
     
-    await send_form_submission_emails(
-        user_email=user.email,
-        user_name=user_name,
-        form_type="User Registration",
-        form_data=form_data
-    )
     
-    return {"user_id": db_user.user_id}
+@app.post("/auth")
+def login_or_signup(payload: AuthRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    # User exists → LOGIN
+    if user is not None :
+        if user.password is None:
+            raise HTTPException(status_code=400, detail="Password not set for this user")
+        if not pwd.verify(payload.password, user.password):
+            
+            raise HTTPException(status_code=400, detail="Incorrect password")
+        
+        token = create_token({"user_id": user.user_id, "email": user.email , "new_user": False})
+        return {
+            "status_code": 200,
+            "message": "Login successful",
+            "token": token
+        }
+
+    # User not exists → SIGNUP
+    hashed_pass = pwd.hash(payload.password)
+    new_user = User(email=payload.email, password=hashed_pass)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_token({"user_id": new_user.user_id, "email": new_user.email , "new_user": True})
+
+    return {
+        "status_code": 200,
+        "message": "Account created",
+        "token": token
+    }
+
+@app.post("/auth/google")
+def google_login(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    google_data = verify_google_token(payload.token)
+
+    if not google_data:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
+
+    email = google_data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email not found in Google token")
+
+    user = db.query(User).filter(User.email == email).first()
+
+    # Existing user → LOGIN
+    if user:
+        token = create_token({"user_id": user.user_id, "email": user.email , "new_user":False})
+        return {
+            "status_code": 200,
+            "message": "Login successful",
+            "token": token
+        }
+
+    # New user → SIGNUP without password
+    new_user = User(email=email, password="google_oauth")  # placeholder
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_token({"user_id": new_user.user_id, "email": new_user.email , "new_user":True})
+    return {
+        "status_code": 201,
+        "message": "Account created",
+        "token": token
+    }
+
+
+# API Endpoints
+@app.post("/auth/google")
+def google_login(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    google_data = verify_google_token(payload.token)
+
+    if not google_data:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
+
+    email = google_data.get("email")
+    name = google_data.get("name") or email.split("@")[0]
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        token = create_token({"user_id": user.user_id, "email": user.email, "new_user": False})
+        return {
+            "status_code": 200,
+            "message": f"Welcome back {name}",
+            "token": token
+        }
+
+    new_user = User(email=email, password="google_oauth")
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_token({"user_id": new_user.user_id, "email": new_user.email, "new_user": True})
+
+    return {
+        "status_code": 201,
+        "message": "Account created",
+        "token": token
+    }
+
 
 razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")))
 
@@ -414,67 +631,6 @@ def create_order(order: OrderRequest):
         logger.exception("Unexpected error while creating order")
         raise HTTPException(status_code=500, detail="Failed to create order")
 
-# @app.post("/event-registrations/")
-# async def create_event_registration(registration: EventRegistrationCreate, db: Session = Depends(get_db)):
-#     user_name = f"{registration.first_name} {registration.last_name}"
-
-#     # Check if registration already exists
-#     existing_registration = db.query(EventRegistration).filter(
-#         EventRegistration.email == registration.email
-#     ).first()
-
-#     if existing_registration:
-#         return {"status": 405, "detail": "User already exists"}
-
-#     # Create new registration
-#     db_registration = EventRegistration(**registration.model_dump())
-#     db.add(db_registration)
-#     db.commit()
-#     db.refresh(db_registration)
-
-#     # Check if contact already exists
-#     existing_contact = db.query(Contact).filter(
-#         Contact.email == registration.email
-#     ).first()
-
-#     if not existing_contact:
-#         db_contact = Contact(
-#             fullname=user_name,
-#             salutation=registration.salutation,
-#             firstname=registration.first_name,
-#             lastname=registration.last_name,
-#             email=registration.email,
-#             phone=registration.phone_number,
-#             company=registration.company,
-#             designation=registration.job_title,
-#             mmml="Yes",
-#         )
-#         db.add(db_contact)
-#         db.commit()
-#         db.refresh(db_contact)
-#     form_data = {
-#         "salutation": registration.salutation,
-#         "first_name": registration.first_name,
-#         "last_name": registration.last_name,
-#         "email": registration.email,
-#         "phone_number": registration.phone_number,
-#         "company": registration.company,
-#         "job_title": registration.job_title,
-#         "years_of_experience": registration.years_of_experience,
-#         "topics_of_interest": registration.topics_of_interest,
-#         "dietary_restrictions": registration.dietary_restrictions,
-#         "referral_source": registration.referral_source,
-#         "created_at": db_registration.created_at.strftime("%Y-%m-%d %H:%M:%S")
-#     }
-    
-#     await send_form_submission_emails(
-#         user_email=registration.email,
-#         user_name=user_name,
-#         form_type="Event Registration",
-#         form_data=form_data
-#     )
-    
-#     return {"registration_id": db_registration.registration_id}
 
 
 
@@ -505,6 +661,53 @@ def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
         "message": f"Discount of {discount} applied",
         "final_amount": final_amount
     }
+    
+@app.post("/post-login-registration/")
+def post_login_registration(
+    reg: EventRegistrationCreate,
+    db: Session = Depends(get_db)
+):
+    existing_contact = db.query(Contact).filter(
+        Contact.email == reg.email
+    ).first()
+
+    # ---------------- EXISTING CONTACT ----------------
+    if existing_contact:
+        existing_contact.MMML_Account = "Yes"
+        db.commit()
+        db.refresh(existing_contact)
+
+        return {
+            "status": "success",
+            "message": "Existing contact updated with MMML account",
+            "data": {"id": existing_contact.id}
+        }
+
+    # ---------------- NEW CONTACT ----------------
+    new_contact = Contact(
+        salutation=reg.salutation,
+        firstname=reg.first_name,
+        lastname=reg.last_name,
+        fullname=f"{reg.first_name} {reg.last_name}",
+        email=reg.email,
+        phone=reg.phone_number,
+        company=reg.company,
+        designation=reg.job_title,
+        years_of_experience=reg.years_of_experience or "0",
+        dietary_preference=reg.dietary_restrictions or "none",
+        MMML_Account="Yes",
+    )
+
+    db.add(new_contact)
+    db.commit()
+    db.refresh(new_contact)
+
+    return {
+        "status": "success",
+        "message": "New contact created with MMML account",
+        "data": {"id": new_contact.id}
+    }
+
 
 @app.post("/event-registration-webhook/")
 async def event_registration_webhook(
@@ -586,6 +789,7 @@ async def event_registration_webhook(
     linkedin_profile = notes.get("linkedin_profile")
     coupon_code = notes.get("coupon_code")   # ✅ added
     designation = notes.get("designation")
+    venue = notes.get("venue")
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
@@ -607,7 +811,8 @@ async def event_registration_webhook(
 
             # Check duplicate registration
             existing_registration = db.query(EventRegistration).filter(
-                EventRegistration.email == email
+                EventRegistration.email == email,
+                EventRegistration.Venue == venue
             ).first()
 
             if existing_registration:
@@ -626,7 +831,8 @@ async def event_registration_webhook(
                     topics_of_interest=topics_of_interest,
                     dietary_restrictions=dietary_restrictions,
                     referral_source=referral_source,
-                    linkedin_profile = linkedin_profile
+                    linkedin_profile = linkedin_profile,
+                    Venue = venue,
                 )
                 db.add(db_registration)
 
@@ -649,6 +855,8 @@ async def event_registration_webhook(
                     dietary_preference = dietary_restrictions,
                     about_mmml = referral_source,
                     linkedin=linkedin_profile,
+                    Mum = 'Yes' if venue == 'Mumbai' else 'No',
+                    Blr = 'Yes' if venue == 'Bangalore' else 'No',
                 )
                 db.add(db_contact)
             else :

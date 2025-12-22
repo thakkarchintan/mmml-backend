@@ -7,3 +7,7 @@ python-dotenv
 fastapi-mail
 jinja2
 razorpay
+python-jose
+passlib
+google-auth
+passlib[bcrypt]
