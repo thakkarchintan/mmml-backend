@@ -790,6 +790,7 @@ async def event_registration_webhook(
     coupon_code = notes.get("coupon_code")   # ✅ added
     designation = notes.get("designation")
     venue = notes.get("venue")
+    venue = venue.strip().title() if venue else None
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
@@ -861,8 +862,10 @@ async def event_registration_webhook(
                 db.add(db_contact)
             else :
                 existing_contact.mmml_time = datetime.now(IST)  # ✅ update timestamp
-                existing_contact.mmml = 'Yes'
+                existing_contact.mmml = 'Yes' 
                 existing_contact.coupon_code=coupon_code
+                existing_contact.Mum = 'Yes' if venue == 'Mumbai' else existing_contact.Mum
+                existing_contact.Blr = 'Yes' if venue == 'Bangalore' else existing_contact.Blr
                 logger.info("Updated mmmL time for exisiting user %s", datetime.now(IST))
         
             db_payment = ProcessedPayment(payment_id=payment_id)
