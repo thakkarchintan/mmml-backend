@@ -791,6 +791,12 @@ async def event_registration_webhook(
     designation = notes.get("designation")
     venue = notes.get("venue")
     venue = venue.strip().title() if venue else None
+    date = notes.get("date")
+    date = date.strip() if date else None
+    time = notes.get("time")
+    time = time.strip() if time else None
+    venue_info = notes.get("venue_info")
+    venue_info = venue_info.strip() if venue_info else None
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
@@ -873,7 +879,13 @@ async def event_registration_webhook(
         db.commit()  # ensures all changes are persisted    
         logger.info("Event Registration successful for %s", email)
         fullname=f"{first_name} {last_name}"
-        background_tasks.add_task(send_registration_email, email, first_name, fullname)
+        event_name = "MMML " +  (venue if venue else "Event")
+        event_date = date if date else "to be announced"
+        event_time = time if time else "to be announced"
+        event_city = venue if venue else "to be announced"
+        event_venue_status = venue_info if venue_info else "to be announced"
+        background_tasks.add_task(send_registration_email, email, first_name, fullname,
+                                  event_date, event_time, event_city, event_venue_status, event_name)
         
         return JSONResponse(
             status_code=200,
@@ -897,6 +909,22 @@ async def event_registration_webhook(
 #     return {"message": "Email has been sent"}
 
 from sqlalchemy.exc import IntegrityError
+
+
+@app.get("/test-email")
+async def test_email(background_tasks: BackgroundTasks):
+    background_tasks.add_task(
+        send_registration_email,
+        to_email="professionalbuzz@gmail.com",
+        firstname="Chintan",
+        event_date="15 March 2026",
+        event_time="10:00 AM",
+        event_city="Bangalore",
+        event_venue_status="To be announced",
+        event_name="MMML Bangalore"
+    )
+
+    return {"status": "ok", "message": "Test email triggered"}
 
 
 @app.post("/waitlist-registrations/")

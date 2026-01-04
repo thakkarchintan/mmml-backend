@@ -168,27 +168,51 @@ async def send_form_submission_emails(user_email: str, user_name: str, form_type
         print(f"Error sending emails: {e}")
         return False
     
-async def send_registration_email(to_email: str, firstname: str = None, fullname: str = None):
+async def send_registration_email(to_email: str, firstname: str = None, fullname: str = None , 
+                                  event_date: str = None , event_time: str = None , 
+                                  event_city: str = None , event_venue_status: str = None,
+                                  event_name: str = None):
     name = firstname if firstname else fullname if fullname else "Participant"
 
-    subject = "Thanks for Registering for MMML #4 – See You There!"
+    subject = f"Registration Confirmation | {event_name}"
 
     body = f"""
     <p>Dear {name},</p>
 
-    <p>Thank you for registering for <b>MMML #4</b> happening on <b>Sunday, 9th November</b>,
-    10:00 AM to 2:30 PM at National Stock Exchange, BKC, Mumbai.</p>
+    <p>Thank you for registering for {event_name} — we’re excited to have you join us.</p>
 
-    <p>We appreciate your interest in joining us for a morning of real conversations and 
-    practical insights from experienced professionals across markets, business, and leadership.</p>
+    <p>MMML brings together growth-minded individuals who care about long-term 
+    thinking, real decision-making, and learning from people who’ve actually been in the arena. 
+    We’re glad you’ll be part of the conversation.</p>
+    
+    <p>Here are the event details:</p>
+    
+    <ul>
+        <li>Event: {event_name}</li>
+        <li>Date: {event_date}</li>
+        <li>Time: {event_time}</li>
+        <li>Location: {event_city}</li>
+        <li>Venue: {event_venue_status}</li>
+    </ul>
+    
+    <p>We’ll share further updates, including venue and event-related information, closer to the event.</p>
+    
+    <p>To stay in the loop, you can:</p>
+    <ul>
+        <li>Follow MMML on LinkedIn: <a href="https://www.linkedin.com/company/mmml">https://www.linkedin.com/company/mmml</a></li>
+        <li>Join the MMML WhatsApp community: <a href="https://chat.whatsapp.com/BbewxC91NUAEFHOeKQkGuz">https://chat.whatsapp.com/BbewxC91NUAEFHOeKQkGuz</a></li>
+    </ul>
 
-    <p>To stay updated with event announcements and join the conversation early, 
-    feel free to join our <a href="https://chat.whatsapp.com/BbewxC91NUAEFHOeKqGuz">MMML WhatsApp community</a>.</p>
+    
+    <p>We’re always looking to grow this community thoughtfully. 
+    If you know friends or colleagues who’d benefit from conversations like these, 
+    feel free to share the event with them.</p>
 
-    <p>If you know colleagues or friends who would benefit from this event, 
-    please do encourage them to register as well.</p>
-
-    <p>We’re excited to have you with us and look forward to seeing you on 9th November!</p>
+    <p>If you have any questions or need support at any point, please reach out to us at 
+        <a href="mailto:hello@mmml.co.in">hello@mmml.co.in</a>
+    </p>
+    
+    <p>Looking forward to seeing you at the event.</p>
 
     <p>Warm regards,<br>Team MMML</p>
     """
