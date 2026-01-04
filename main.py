@@ -776,27 +776,32 @@ async def event_registration_webhook(
 
     # Extract data from notes
     email = notes.get("email")
-    salutation = notes.get("salutation")
     first_name = notes.get("first_name")
     last_name = notes.get("last_name")
-    phone_number = notes.get("phone_number")
-    company = notes.get("company")
-    job_title = notes.get("job_title")
-    years_of_experience = notes.get("years_of_experience")
-    topics_of_interest = notes.get("topics_of_interest")
-    dietary_restrictions = notes.get("dietary_restrictions")
-    referral_source = notes.get("referral_source")
-    linkedin_profile = notes.get("linkedin_profile")
-    coupon_code = notes.get("coupon_code")   # ✅ added
-    designation = notes.get("designation")
     venue = notes.get("venue")
-    venue = venue.strip().title() if venue else None
     date = notes.get("date")
-    date = date.strip() if date else None
     time = notes.get("time")
-    time = time.strip() if time else None
-    venue_info = notes.get("venue_info")
-    venue_info = venue_info.strip() if venue_info else None
+    extra_raw = notes.get("extra")
+    extra = {}
+
+    if extra_raw:
+        try:
+            extra = json.loads(extra_raw)
+        except Exception:
+            logger.warning("Failed to parse extra JSON in notes")
+            
+    salutation = extra.get("salutation")
+    phone_number = extra.get("phone_number")
+    company = extra.get("company")
+    job_title = extra.get("job_title")
+    years_of_experience = extra.get("years_of_experience")
+    topics_of_interest = extra.get("topics_of_interest")
+    dietary_restrictions = extra.get("dietary_restrictions")
+    referral_source = extra.get("referral_source")
+    linkedin_profile = extra.get("linkedin_profile")
+    coupon_code = extra.get("coupon_code")
+    venue_info = extra.get("venue_info")
+    
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
