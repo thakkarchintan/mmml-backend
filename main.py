@@ -816,6 +816,7 @@ async def event_registration_webhook(
     venue_info = extra.get("venue_info")
     
     logger.info("FINAL FIELD VALUES BEING SAVED: %s", {
+        "salutation": salutation,
         "email": email,
         "first_name": first_name,
         "last_name": last_name,
