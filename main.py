@@ -802,6 +802,21 @@ async def event_registration_webhook(
     coupon_code = extra.get("coupon_code")
     venue_info = extra.get("venue_info")
     
+    logger.info("FINAL FIELD VALUES BEING SAVED: %s", {
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "venue": venue,
+        "phone_number": phone_number,
+        "years_of_experience": years_of_experience,
+        "topics_of_interest": topics_of_interest,
+        "dietary_restrictions": dietary_restrictions,
+        "referral_source": referral_source,
+        "linkedin_profile": linkedin_profile,
+        "coupon_code": coupon_code,
+        "venue_info": venue_info,
+    })
+    
     if not email:
         logger.warning("Missing email in webhook notes.")
         return JSONResponse(
