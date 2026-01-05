@@ -647,7 +647,6 @@ def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Coupon has expired")
     if coupon.used_count >= coupon.max_usage:
         raise HTTPException(status_code=400, detail="Coupon usage limit reached")
-
     # Apply discount
     if coupon.discount_type == DiscountType.flat:
         discount = float(coupon.discount_value)
@@ -784,11 +783,25 @@ async def event_registration_webhook(
     extra_raw = notes.get("extra")
     extra = {}
 
+    logger.info("RAW EXTRA RECEIVED: %s", extra_raw)
+
     if extra_raw:
-        try:
-            extra = json.loads(extra_raw)
-        except Exception:
-            logger.warning("Failed to parse extra JSON in notes")
+        # Case 1 – already dict
+        if isinstance(extra_raw, dict):
+            extra = extra_raw
+        else:
+            try:
+                extra = json.loads(extra_raw)
+            except Exception as e:
+                logger.warning("FAILED normal JSON parse: %s", e)
+
+                # Case 2 – single quotes → fix
+                try:
+                    fixed = extra_raw.replace("'", '"')
+                    extra = json.loads(fixed)
+                except Exception as e2:
+                    logger.error("FAILED fallback JSON parse: %s", e2)
+                    extra = {}
             
     salutation = extra.get("salutation")
     phone_number = extra.get("phone_number")
