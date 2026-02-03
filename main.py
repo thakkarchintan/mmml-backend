@@ -310,10 +310,12 @@ class Coupon(Base):
     expiry_date = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+    product = Column(String(255), nullable=True)
 
 # Request schema
 class ApplyCouponRequest(BaseModel):
     coupon_code: str
+    venue: str
     amount: float
 
 # Response schema
@@ -637,8 +639,32 @@ def create_order(order: OrderRequest):
 
 @app.post("/apply", response_model=ApplyCouponResponse)
 def apply_coupon(data: ApplyCouponRequest, db: Session = Depends(get_db)):
-    coupon = db.query(Coupon).filter(Coupon.code == data.coupon_code).first()
+    if not data.coupon_code:
+        raise HTTPException(status_code=400, detail="Coupon code is required")
+    
+    if not data.venue:
+        raise HTTPException(status_code=400, detail="Location is required")
+        
+    product = "MMML_BLR" if data.venue == "Bangalore" else "MMML_MUM"
+        
+    logger.info(f"Coupon code: {data.coupon_code}")
+    logger.info(f"Venue: {data.venue}")
+    logger.info(f"Product resolved: {product}")
+    logger.info(f"Amount: {data.amount}")
+    logger.info(f"Current UTC time: {datetime.utcnow()}")
 
+    
+    query = db.query(Coupon).filter(
+        Coupon.code == data.coupon_code,
+        Coupon.product == product,
+        Coupon.expiry_date > datetime.utcnow(),
+        Coupon.used_count < Coupon.max_usage
+    )
+
+    logger.info(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
+
+    coupon = query.first()
+    
     if not coupon:
         raise HTTPException(status_code=404, detail="Invalid coupon code")
     if not coupon.is_active:
@@ -814,7 +840,7 @@ async def event_registration_webhook(
     linkedin_profile = extra.get("linkedin_profile")
     coupon_code = extra.get("coupon_code")
     venue_info = extra.get("venue_info")
-    
+    product = "MMML_BLR" if venue == "Bangalore" else "MMML_MUM"
     logger.info("FINAL FIELD VALUES BEING SAVED: %s", {
         "salutation": salutation,
         "email": email,
@@ -844,6 +870,8 @@ async def event_registration_webhook(
             if coupon_code:
                 updated = db.query(Coupon).filter(
                     Coupon.code == coupon_code,
+                    Coupon.product == product,
+                    Coupon.expiry_date > datetime.utcnow(),
                     Coupon.used_count < Coupon.max_usage
                 ).update({Coupon.used_count: Coupon.used_count + 1})
             
