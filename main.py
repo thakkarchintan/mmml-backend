@@ -72,7 +72,13 @@ db_ssl_ca = os.getenv("DB_SSL_CA")
 if db_ssl_ca:
     connect_args["ssl"] = {"ca": db_ssl_ca}
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, 
+                        connect_args=connect_args,
+                        pool_pre_ping=True,
+                        pool_recycle=900,       # refresh before MySQL / NAT timeout
+                        pool_size=5,
+                        max_overflow=10,
+                        pool_timeout=30,)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
